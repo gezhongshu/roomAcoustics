@@ -125,6 +125,11 @@ WallAirAbsorb::WallAirAbsorb()
 {
 }
 
+WallAirAbsorb::WallAirAbsorb(string fileName)
+{
+
+}
+
 WallAirAbsorb::~WallAirAbsorb()
 {
 }
@@ -186,7 +191,7 @@ vector<double> WallAirAbsorb::Absorb(double dist, int ref)
 void WallAirAbsorb::Init(int ref)
 {
 	vector<double> btmp;
-	for (auto al : alpha)
+	for (auto al : alpha[0])
 		btmp.push_back(sqrt(1 - al));
 	for (auto f : fq)
 		attenAir.push_back(exp(-0.5 * 5.54e-4 * (50 / 50)*pow((f > 10000 ? 10000 : f)/1000, 1.7)));
@@ -194,6 +199,11 @@ void WallAirAbsorb::Init(int ref)
 	for (int i = 0; i < ref; i++)
 		for (int j = 0; j < btmp.size(); j++)
 			bref[i + 1][j] = bref[i][j] * btmp[j];
+
+}
+
+void WallAirAbsorb::LoadMat(vector<string> fileNames)
+{
 
 }
 
@@ -235,7 +245,8 @@ vector<vector<float>> WallAirAbsorb::ConvHrir(vector<double> filter, vector<vect
 	return hrirFiltered;
 }
 
-vector<double> WallAirAbsorb::alpha = { 0.36, 0.36, 0.36, 0.45, 0.51, 0.64, 0.51, 0.51 };
+vector<string> WallAirAbsorb::matName = vector<string>();
+vector<vector<double>> WallAirAbsorb::alpha = { { 0.36, 0.36, 0.36, 0.45, 0.51, 0.64, 0.51, 0.51 } };
 vector<double> WallAirAbsorb::attenAir = vector<double>();
 vector<double> WallAirAbsorb::fq = {0, 125, 250, 500, 1000, 2000, 4000, 24e3};
 vector<vector<double>> WallAirAbsorb::bref = vector<vector<double>>();

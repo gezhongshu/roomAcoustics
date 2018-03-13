@@ -31,13 +31,16 @@ class WallAirAbsorb
 {
 public:
 	WallAirAbsorb();
+	WallAirAbsorb(string fileName);
 	~WallAirAbsorb();
 	static vector<double> Absorb(double dist, int ref);
 	static void Init(int ref);
+	static void LoadMat(vector<string> fileNames);
 	static vector<vector<float>> ConvHrir(vector<double> filter, vector<vector<float>> hrir);
 
 private:
-	static vector<double> alpha, fq, attenAir;
-	static vector<vector<double>> bref;
+	static vector<string> matName;
+	static vector<double> fq, attenAir;
+	static vector<vector<double>> alpha, bref;
 };
 #endif // !DATABASE_H
