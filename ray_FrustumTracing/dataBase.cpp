@@ -250,3 +250,13 @@ vector<vector<double>> WallAirAbsorb::alpha = { { 0.36, 0.36, 0.36, 0.45, 0.51, 
 vector<double> WallAirAbsorb::attenAir = vector<double>();
 vector<double> WallAirAbsorb::fq = {0, 125, 250, 500, 1000, 2000, 4000, 24e3};
 vector<vector<double>> WallAirAbsorb::bref = vector<vector<double>>();
+
+
+
+Direct::Direct()
+{
+}
+
+Direct::~Direct()
+{
+}

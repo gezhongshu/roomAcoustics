@@ -2,6 +2,7 @@
 #define MESH_H
 
 #include <string>
+#include "utils.h"
 #include "geomObject.h"
 //#include "boundingBox.h"
 using namespace std;

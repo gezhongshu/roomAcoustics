@@ -9,65 +9,7 @@
 #include <iostream>
 using namespace std;
 
-/**
-   Funkcja sprawdza czy podany znak jest cyfra (od 0 do 9 lub znakiem -)*/
-char isNumber(char c)
-{
-   if (isdigit(c) || c=='-')
-      return true;
-   else
-      return false;
-}
 
-/**
-   Funkcja zwraca wszystkie liczby zawarte w napisie text
-   @param text - tekst, z którego mają zostać wyciągnięte liczby
-   @return tablica znalezionych liczb - należy pamiętać aby zwolnić zarezerwowaną pamięć gdy nie będzie już potrzebna*/
-float *getNumbers(string text)
-{
-   stringstream stream;
-   string tmp;
-   float numbers[20];
-   float *result = NULL;
-   int count = 0;
-   //zapisanie napisu do strumienia
-   stream << text;
-   //pobranie słowa ze strumienia i sprawdzenie czy nie jest liczbą
-   while (!stream.eof()) {
-      stream >> tmp;
-      if (isNumber(tmp[0])) {
-         numbers[count] = (float) atof(tmp.c_str());
-         count++;
-      }
-   }
-   //zarezerwowanie pamięci na wyniki
-   result = new float[count];
-   for (int i = 0; i < count; i++)
-      result[i] = numbers[i];
-   return result;
-}
-/**
-   Funkcja wyłuskuje z podanego napisu nazwę zawartą pomiędzy cudzysłowiami
-   @param text - tekst, z którego ma zostać wyłuskana nazwa
-   @return nazwa*/
-string getName(string text)
-{
-      size_t start, end;
-      start = text.find_first_of("\"");
-      end = text.find_last_of("\"");
-      return text.substr(start + 1, end - start - 1);
-}
-/**
-   Funkcja pobiera z zadanego tekstu nazwę bitmapy
-   @param text - tekst w któym należy wyszukać nazwy bitmapy (nazwa bitmapy znajduje się za ostatnim / i przed ostatnim "
-   @return string - napis zawierający znalezioną nazwę bitmapy*/
-string getBitmapName(string text)
-{
-   size_t start, end;
-   start = text.find_last_of("\\");
-   end = text.find_last_of("\"");
-   return text.substr(start + 1, end - start - 1);
-}
 /**
    Konstruktor bezparametrowy, inicjalizuje wszystkie pola klasy na wartości zerowe (0 lub NULL)*/
 Mesh::Mesh():objects(NULL), geomCount(0)

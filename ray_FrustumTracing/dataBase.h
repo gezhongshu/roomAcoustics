@@ -8,6 +8,7 @@
 #include <cassert>
 
 #include "mathdefs.h"
+#include "utils.h"
 
 using namespace std;
 
@@ -42,5 +43,15 @@ private:
 	static vector<string> matName;
 	static vector<double> fq, attenAir;
 	static vector<vector<double>> alpha, bref;
+};
+
+class Direct
+{
+public:
+	Direct();
+	~Direct();
+
+private:
+
 };
 #endif // !DATABASE_H

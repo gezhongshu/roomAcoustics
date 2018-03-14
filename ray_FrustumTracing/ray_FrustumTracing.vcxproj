@@ -128,6 +128,7 @@
     <ClInclude Include="obbTree.h" />
     <ClInclude Include="quaternion.h" />
     <ClInclude Include="tracing.h" />
+    <ClInclude Include="utils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dataBase.cpp" />
@@ -140,6 +141,7 @@
     <ClCompile Include="obbTree.cpp" />
     <ClCompile Include="quaternion.cpp" />
     <ClCompile Include="tracing.cpp" />
+    <ClCompile Include="utils.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
