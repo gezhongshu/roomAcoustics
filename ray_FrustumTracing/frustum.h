@@ -80,4 +80,21 @@ struct FsmNode
 		colli = false;
 	}
 };
+
+
+template <class T> struct BiNode
+{
+	T data;//数据域
+	BiNode<T> *left, *right;//指向左右子结点的指针
+
+	BiNode(const T &data, BiNode<T> *left = 0, BiNode<T> *right = 0) :
+		data(data), left(left), right(right) {};
+	void relase()
+	{
+		if (left != NULL)left->relase();
+		if (right != NULL)right->relase();
+		delete this;
+	};
+};
+
 #endif

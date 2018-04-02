@@ -1,6 +1,152 @@
 #include "tracing.h"
 
 
+void Tracing::ReadPathAndColli(string filename, string destdir, vector<BiNode<Ray>*>& rays, int len)
+{
+	fstream fin(filename, ios::in);
+	int n; //Number of receivers
+	Vector4f receiver, front, up;
+	vector<vector<double>> hrir;
+	fin >> n;
+	for (int i = 0; i < n; i++)
+	{
+		fin >> receiver[0] >> receiver[1] >> receiver[2] >>
+			front[0] >> front[1] >> front[2] >>
+			up[0] >> up[1] >> up[2];
+		hrir = vector<vector<double>>(len, vector<double>(2));
+		if (_access(destdir.c_str(), 6) == -1)_mkdir(destdir.c_str());
+		ofstream foutbin(destdir + to_string(i) + ".binary", ios::binary);
+		ColliReceiver(rays, receiver, front, up, hrir, foutbin);
+		foutbin.close();
+		/*ofstream fout(destdir + to_string(i) + ".dat", ios::binary);
+		for (int k = 0; k < len; k++)
+		for (int l = 0; l < 2; l++)
+		fout.write((char*)&hrir[k][l], sizeof(double));
+		fout.close();*/
+	}
+	fin.close();
+}
+
+void Tracing::ReadSourceAndTracing(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref, string fileIndex)
+{
+	int numSources;
+	string pathFile;
+	Vector4f source;
+	srand((int)time(0));
+	fstream fin(fileIndex, ios::in);
+	fin >> numSources;
+	for (int i = 0; i < numSources; i++)
+	{
+		fin >> source[0] >> source[1] >> source[2] >> pathFile;
+		rays.clear();
+		TracingInRoom(rays, tree, ref, source);
+		ReadPathAndColli(pathFile, ".\\data\\brir\\Source_" + to_string(i) + "\\", rays, 16384);
+	}
+	fin.close();
+}
+
+void Tracing::TracingInRoom(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref, Vector4f s, int nCircle)
+{
+	//int nCircle = 4;
+	float dTheta = PI / nCircle;
+	Vector4f source = s;
+	for (float i = 0.5f; i < nCircle; i++)
+	{
+		float theta = i*dTheta;
+		int m = round(2 * PI*sin(theta) / dTheta);
+		for (float j = 0.5f; j < m; j++)
+		{
+			float phi = j*PI * 2 / m;
+			Vector4f drct = Vector4f(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
+			double amp = DirectBeam(drct);
+			Ray ray = Ray(source, drct, amp);
+			OBBIntersection::CollisionTest(&ray, tree);
+			rays.push_back(new BiNode<Ray>(ray));
+			RayTracing(rays.back(), tree, ref);
+		}
+	}
+}
+
+void Tracing::RayTracing(BiNode<Ray>* pr, OBBTree * tree, int ref)
+{
+	if (pr->data.IsIntersect() && ref > 0)
+	{
+		Tracing::RefRay(pr, *pr->data.GetFace());
+		OBBIntersection::CollisionTest(& pr->left->data, tree);
+		Tracing::RayTracing(pr->left, tree, ref - 1);
+		OBBIntersection::CollisionTest(&pr->right->data, tree);
+		Tracing::RayTracing(pr->right, tree, ref - 1);
+	}
+}
+
+void Tracing::RefRay(BiNode<Ray>* pr, faceInfo & f)
+{
+	Vector4f d0, d1, n, start;
+	d0 = pr->data.GetDirect();
+	n = f.faceNorm;
+	start = pr->data.GetStartPt() + pr->data.GetDirect()*(pr->data.GetEnd() - 1e-5);
+	float elev = acos(1 - 2 * (float)rand() / RAND_MAX) / 2;
+	float azim = PI * 2 * (float)rand() / RAND_MAX;
+	Vector4f z = Vector4f(0.f, 0.f, 1.f);
+	float theta = acos(Vector4f::Dot3f(z, n));
+	Vector4f c = Vector4f::Cross3f(z, n);
+	if (c.GetLenght() < EPS)
+		c = Vector4f(0.f, 1.f, 0.f);
+	else
+		c.SetLenght(1.f);
+	Matrix4x4f w = Matrix4x4f();
+	w.r0 = Vector4f(0.f, -c[2], c[1]);
+	w.r1 = Vector4f(c[2], 0.f, -c[0]);
+	w.r2 = Vector4f(-c[1], c[0], 0.f);
+	Matrix4x4f eye = Matrix4x4f();
+	eye.LoadIdentity();
+	Matrix4x4f R = eye + w*sin(theta) + w * w * (1 - cos(theta));
+	d1 = R * Vector4f(sin(elev)*cos(azim), sin(elev)*sin(azim), cos(elev));
+	d1.SetLenght(1.0f);
+	pr->left = new BiNode<Ray>(Ray(start, d1));
+	float proj = Vector4f::Dot3f(d0, n);
+	d1 = d0 - n*proj * 2;
+	d1.SetLenght(1.0f);
+	pr->right = new BiNode<Ray>(Ray(start, d1));
+}
+
+void Tracing::ColliReceiver(vector<BiNode<Ray>*>& rays, Vector4f rec, Vector4f front, Vector4f up, vector<vector<double>>& hrir, ofstream& fout)
+{
+	int id, n = hrir.size();
+	double chordLen, proj, Amp, length, angleLim = 0.05;//0.05 means a diameter of 5 cm at 1 meter distance
+	Vector4f vec;
+	vector<vector<float>> hrir_s;
+	vector<double> href;
+	for (int i = 0; i < rays.size(); i++)
+	{
+		Amp = 1.f;
+		length = 0.f;
+		for (int j = 0; j < rays[i].size(); j++)
+		{
+			vec = rays[i][j].GetStartPt() - rec;
+			proj = -Vector4f::Dot3f(vec, rays[i][j].GetDirect());
+			chordLen = Vector4f::Cross3f(vec, rays[i][j].GetDirect()).GetLenght();
+			HRIR::JudgeDirection(vec, front, up, hrir_s);
+			int len = length + vec.GetLenght();
+			id = (int)round(len * FS / SOUND_SPEED);
+			if (id >= n)continue;
+			if (chordLen / vec.GetLenght() <= angleLim && proj > 0 && proj <= rays[i][j].GetEnd())
+			{
+				href = WallAirAbsorb::Absorb(len, i);
+				hrir_s = WallAirAbsorb::ConvHrir(href, hrir_s);
+				for (int ihs = 0; ihs < hrir_s.size(); ihs++)
+				{
+					if (id + ihs >= n)break;
+					hrir[id + ihs][0] += double(hrir_s[ihs][0]) * Amp / len;
+					hrir[id + ihs][1] += double(hrir_s[ihs][1]) * Amp / len;
+				}
+			}
+			Amp *= 0.8;
+			length += rays[i][j].GetEnd();
+		}
+	}
+}
+
 void Tracing::RayTracing(vector<Ray>& ray, OBBTree* tree, int ref)
 {
 	while (ray.back().IsIntersect() && ray.size()<=ref)
@@ -30,9 +176,9 @@ Ray Tracing::RefRay(Ray & r, faceInfo & f)
 	//d0.SetLenght(1.0f);
 	n = f.faceNorm;
 	//n.SetLenght(1.0f);
-	float scatter = Mtllib::GetScatter(f.m_id);
-	if (scatter > ((float)rand()/RAND_MAX)) {
-		float elev = asin((float)rand() / RAND_MAX);
+	/*float scatter = Mtllib::GetScatter(f.m_id);
+	if (scatter > ((float)rand()/RAND_MAX)) {*/
+		float elev = acos(1 - 2 * (float)rand() / RAND_MAX) / 2;
 		float azim = PI * 2 * (float)rand() / RAND_MAX;
 		Vector4f z = Vector4f(0.f, 0.f, 1.f);
 		float theta = acos(Vector4f::Dot3f(z, n));
@@ -50,11 +196,11 @@ Ray Tracing::RefRay(Ray & r, faceInfo & f)
 		Matrix4x4f R = eye + w*sin(theta) + w * w * (1 - cos(theta));
 		d1 = R * Vector4f(sin(elev)*cos(azim), sin(elev)*sin(azim), cos(elev));
 		//float variance = Vector4f::Dot3f(d1, n) - Vector4f::Dot3f(z, Vector4f(sin(elev)*cos(azim), sin(elev)*sin(azim), cos(elev)));
-	}
-	else {
+	/*}
+	else {*/
 		float proj = Vector4f::Dot3f(d0, n);
 		d1 = d0 - n*proj * 2;
-	}
+	//}
 	d1.SetLenght(1.0f);
 	return Ray(r.GetStartPt() + r.GetDirect()*(r.GetEnd() - 1e-5), d1);
 }

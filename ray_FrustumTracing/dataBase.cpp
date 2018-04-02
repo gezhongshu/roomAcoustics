@@ -125,9 +125,24 @@ WallAirAbsorb::WallAirAbsorb()
 {
 }
 
-WallAirAbsorb::WallAirAbsorb(string fileName)
+void WallAirAbsorb::LoadwithFileList(string fileName)
 {
-
+	fstream fin(fileName, ios::in);
+	int matNum, last;
+	string line;
+	fin >> matNum;
+	getline(fin, line);
+	for (int i = 0; i < matNum; i++)
+	{
+		getline(fin, line);
+		matName.push_back(line);
+	}
+	LoadMat(matName);
+	for (int i = 0; i < matName.size(); i++)
+	{
+		last = matName[i].find_last_of('\\');
+		matName[i] = matName[i].substr(last + 1);
+	}
 }
 
 WallAirAbsorb::~WallAirAbsorb()
@@ -204,7 +219,33 @@ void WallAirAbsorb::Init(int ref)
 
 void WallAirAbsorb::LoadMat(vector<string> fileNames)
 {
-
+	int matNum, last;
+	string line;
+	vector<float> nums;
+	alpha = vector<vector<double>>();
+	scatter = vector<vector<double>>();
+	fq = vector<double>();
+	for (int i = 0; i < fileNames.size(); i++)
+	{
+		fstream fin(fileNames[i], ios::in);
+		getline(fin, line);
+		if (i == 0)
+		{
+			nums = getNumbers(line);
+			for (auto num : nums)
+				fq.push_back(num);
+		}
+		getline(fin, line);
+		nums = getNumbers(line);
+		alpha.push_back(vector<double>());
+		for (auto num : nums)
+			alpha.back().push_back(num);
+		getline(fin, line);
+		nums = getNumbers(line);
+		scatter.push_back(vector<double>());
+		for (auto num : nums)
+			scatter.back().push_back(num);
+	}
 }
 
 vector<vector<float>> WallAirAbsorb::ConvHrir(vector<double> filter, vector<vector<float>> hrir)
@@ -245,11 +286,12 @@ vector<vector<float>> WallAirAbsorb::ConvHrir(vector<double> filter, vector<vect
 	return hrirFiltered;
 }
 
-vector<string> WallAirAbsorb::matName = vector<string>();
+vector<string> WallAirAbsorb::matName = vector<string>(1, string("data\\matLib\\mat_scene09_concrete.csv"));
 vector<vector<double>> WallAirAbsorb::alpha = { { 0.36, 0.36, 0.36, 0.45, 0.51, 0.64, 0.51, 0.51 } };
 vector<double> WallAirAbsorb::attenAir = vector<double>();
 vector<double> WallAirAbsorb::fq = {0, 125, 250, 500, 1000, 2000, 4000, 24e3};
 vector<vector<double>> WallAirAbsorb::bref = vector<vector<double>>();
+vector<vector<double>> WallAirAbsorb::scatter = vector<vector<double>>();
 
 
 
@@ -259,4 +301,67 @@ Direct::Direct()
 
 Direct::~Direct()
 {
+}
+
+void Direct::LoadCSV(string fileName)
+{
+	string name = fileName.substr(fileName.find_last_of('\\'));
+	if (type.size() > 0)
+		if (type == name)
+			return;
+		else
+			type = name;
+	fstream fin(fileName, ios::in);
+	COMPLEX temp;
+	string line;
+	getline(fin, line);
+	while (getline(fin, line))
+	{
+		vector<string> values = splitLine(line, ',');
+		string head = values.front();
+		int phi, theta;
+		phi = getNumbers(head.substr(1, 3)).front();
+		theta = getNumbers(head.substr(5, 3)).front();
+		values.erase(values.begin());
+		for (auto v : values)
+			if (getNumbers(v, temp)) directions[phi][theta].push_back(temp);
+	}
+}
+
+vector<COMPLEX> Direct::EvalAmp(int azim, int elev)
+{
+	return directions[azim][90 - elev];
+}
+
+vector<COMPLEX> Direct::EvalAmp(vector<int> polar)
+{
+	return directions[polar[0]][polar[1]];
+}
+
+vector<vector<vector<COMPLEX>>> Direct::directions(vector<vector<vector<COMPLEX>>>(360, vector<vector<COMPLEX>>(181, vector<COMPLEX>())));
+string Direct::type = string();
+
+
+Orient::~Orient()
+{
+}
+
+Orient::Orient(Vector4f p, Vector4f f, Vector4f u) :position(p), front(f), up(u)
+{
+	right = Vector4f::Cross3f(front, up);
+	right.SetLenght(1.0); front.SetLenght(1.0); up.SetLenght(1.0);
+}
+
+Orient::Orient(Vector4f p)
+{
+	Orient(p, Vector4f(1, 0, 0), Vector4f(0, 1, 0));
+}
+
+vector<int> Orient::LocalPolar(Vector4f drct)
+{
+	drct.SetLenght(1.0);
+	float z = Vector4f::Dot3f(drct, up), x = Vector4f::Dot3f(drct, front), y = Vector4f::Dot3f(drct, right);
+	float el = asin(z) * 180 / PI, az = atan2(y, x) * 180 / PI;
+	az += int(az < 0) * 360;
+	return vector<int>({ int(az) ,90 - int(el) });
 }

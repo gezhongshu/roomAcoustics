@@ -16,8 +16,11 @@ int main()
 	Ray ray;
 	vector<Ray> rays;
 	vector<FsmNode> fNodes;
-	vector<int> vertId;
-	Mesh* obj = new Mesh("elecOrgan", "data\\auditory_simple.obj", vertId, true);
+	vector<int> vertId, matId;
+	WallAirAbsorb::LoadwithFileList(string("data\\matInd\\mat_scene05.txt"));
+	//Direct genelec;
+	//genelec.LoadCSV("data\\Genelec8020.csv");
+	Mesh* obj = new Mesh("elecOrgan", "data\\model\\scene05.obj", vertId, matId, true);
 	//Mesh* obj = new Mesh("elecOrgan", "data\\floor.obj", vertId, true);
 
 	ray.Move(Vector4f(0.f, 2.f, 0.f));
@@ -39,7 +42,7 @@ int main()
 
 	cout << "Calculating the OBB tree of the mesh ..." << endl;
 	//tree->ComputeOBBTree(OBB_DEPTH_CONDITION, 1, vertTab, vertCount, 1.0f);
-	tree2->ComputeOBBTree(OBB_DEPTH_CONDITION, 20, vertTab2, vertCount2, vertId, 1.f);
+	tree2->ComputeOBBTree(OBB_DEPTH_CONDITION, 20, vertTab2, vertCount2, vertId, matId, 1.f);
 	cout << "OBB tree calculated." << endl;
 
 	vector<vector<Ray> > rays_s;
@@ -55,7 +58,7 @@ int main()
 	//ShowWindow(WND.hWnd, nShowCmd); 						// wyœwietla utworzony formularz na podstawie jego uchwytu
 
 	int ref = 1;
-	WallAirAbsorb::Init(ref);
+	//WallAirAbsorb::Init(ref);
 	cout << "Tracing rays ..." << endl;
 	Tracing::ReadSourceAndTracing(rays_s, tree2, ref, ".\\data\\sources_exp.txt");
 	cout << "Traced off." << endl;

@@ -1,6 +1,7 @@
 #ifndef OBB_TREE_H
 #define OBB_TREE_H
 #include <vector>
+#include <cassert>
 
 #include "OBB.h"
 #include "mathdefs.h"
@@ -47,8 +48,8 @@ public:
 	OBBTree();
 	~OBBTree();
 
-	bool ComputeOBBTree(TREE_CONDITION treeCondition, int TreeConParam, float* tmpVert, 
-						int tmpCount, vector<int>& vertId, float tmpScale = 1.0f);
+	bool ComputeOBBTree(TREE_CONDITION treeCondition, int TreeConParam, float* tmpVert,
+		int tmpCount, vector<int>& vertId, vector<int>& matId = vector<int>(1, -1), float tmpScale = 1.0f);
 	
 	OBBTreeNode* GetTree()			{return tree;}
 	void SetMinVertCount(int tmp)	{minVertCount = tmp;}

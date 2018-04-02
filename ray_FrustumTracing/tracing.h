@@ -16,11 +16,18 @@
 
 namespace Tracing
 {
+	void ReadPathAndColli(string filename, string destdir, vector<BiNode<Ray>*>& rays, int len);
+	void ReadSourceAndTracing(vector<BiNode<Ray>*>& rays, OBBTree* tree, int ref, string fileIndex);
+	void TracingInRoom(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref, Vector4f s, int nCircle = 150);
+	void RayTracing(BiNode<Ray> * pr, OBBTree * tree, int ref);
+	void RefRay(BiNode<Ray>* pr, faceInfo& f);
+	void ColliReceiver(vector<BiNode<Ray>*>& rays, Vector4f rec, Vector4f front, Vector4f up, vector<vector<double>>& hrir, ofstream& fout);
+
 	void RayTracing(vector<Ray> &ray, OBBTree* tree, int ref);
 	void RayTracing(vector<Ray> &ray, OBBTree* tree, float len);
 	Ray RefRay(Ray &r, faceInfo &f);
 	template<typename T>
-	void TracingInRoom(vector<vector<Ray>>& rays, OBBTree * tree, T ref, Vector4f s, int nCircle);
+	void TracingInRoom(vector<vector<Ray>>& rays, OBBTree * tree, T ref, Vector4f s, int nCircle = 500);
 	void ColliReceiver(vector<vector<Ray>>& rays, Vector4f rec, Vector4f front, Vector4f up, vector<vector<double>>& hrir, ofstream& fout);
 
 	FsmNode& ColliFace(FsmNode& fNode, OBBTree* tree);
@@ -45,7 +52,7 @@ namespace Tracing
 }
 
 template <typename T>
-void Tracing::TracingInRoom(vector<vector<Ray>>& rays, OBBTree * tree, T ref, Vector4f s, int nCircle = 500)
+void Tracing::TracingInRoom(vector<vector<Ray>>& rays, OBBTree * tree, T ref, Vector4f s, int nCircle)
 {
 	//int nCircle = 4;
 	float dTheta = PI / nCircle;

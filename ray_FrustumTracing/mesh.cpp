@@ -19,13 +19,17 @@ Mesh::Mesh():objects(NULL), geomCount(0)
 /**
    Konstruktor, jako parametry przyjmuje nazwę pliku, z którego ma wczytać informajce o obiekcie oraz flagę określającą czy normalne są zdefiniowane dla każdego wierzchołka
    @param texturePath - ścieżka do pliku .bmp zawierającego teksture
-   @param folderPath - ścieżka do folderu zawierającego pliki obiektu*/
-Mesh::Mesh(string id, string folderPath, vector<int>& vertId, bool alpha): objects(NULL), name(id)
+   @param fileName - ścieżka do folderu zawierającego pliki obiektu*/
+Mesh::Mesh(string id, string fileName, vector<int>& vertId, bool alpha): objects(NULL), name(id)
 {
-   //loadObject(folderPath, alpha);
-   //loadAnimation(folderPath);
-	//loadVert(folderPath, vertId);
-	loadObj(folderPath, vertId);
+   //loadObject(fileName, alpha);
+   //loadAnimation(fileName);
+	//loadVert(fileName, vertId);
+	loadObj(fileName, vertId);
+}
+Mesh::Mesh(string id, string fileName, vector<int>& vertId, vector<int>& matId, bool alpha) : objects(NULL), name(id)
+{
+	loadObj(fileName, vertId, matId);
 }
 /**
    Konstruktor (pseudo)kopiujący. Nie kopiuje nic, ustawia wszystkie pola na zero - nie wolno kopiować mesha!*/
@@ -42,9 +46,9 @@ Mesh::~Mesh()
 /**
    Load mesh from simple text list of vertices and faces.
 */
-void Mesh::loadVert(string folderPath, vector<int>& vertId)
+void Mesh::loadVert(string fileName, vector<int>& vertId)
 {
-	ifstream finModel((folderPath + "\\mesh.vrt").c_str(), ios_base::in);
+	ifstream finModel((fileName + "\\mesh.vrt").c_str(), ios_base::in);
 	if (!finModel)return;//Quit if not found.
 	float point[3];
 	vector<Vector3f> vertices, faceVerts;
@@ -100,11 +104,11 @@ void Mesh::loadVert(string folderPath, vector<int>& vertId)
 /**
 Load mesh from simple text list of vertices and faces.
 */
-void Mesh::loadObj(string filename, vector<int>& vertId)
+void Mesh::loadObj(string fileName, vector<int>& vertId)
 {
-	ifstream finModel(filename.c_str(), ios_base::in);
+	ifstream finModel(fileName.c_str(), ios_base::in);
 	if (!finModel)return;//Quit if not found.
-	float *point;
+	vector<float> point;
 	vector<Vector3f> vertices, faceVerts;
 	Vector2f *texcoords = NULL;
 	Vector3f *normals = NULL;
@@ -129,7 +133,6 @@ void Mesh::loadObj(string filename, vector<int>& vertId)
 		{
 			point = getNumbers(line);
 			vertices.push_back(Vector3f(point[0] / 1e3, point[1] / 1e3, point[2] / 1e3));
-			delete[] point;
 			vertNum++;
 		}
 		if (line[0] == 'f')
@@ -144,11 +147,73 @@ void Mesh::loadObj(string filename, vector<int>& vertId)
 				faceVerts.push_back(vertices[vIndex-1]);
 				vertId.push_back(vIndex - 1);
 			}
-			delete[] point;
 			faceNum++;
 		}
 	}
 
+	objects[geomobjectsCount - 1].set(faceVerts.size() / 3, &faceVerts[0], texcoords, normals, tmpPos, name, parent, tmpRot, tmpRotAngle);
+
+	finModel.close();
+}
+
+void Mesh::loadObj(string fileName, vector<int>& vertId, vector<int>& matId)
+{
+	ifstream finModel(fileName.c_str(), ios_base::in);
+	if (!finModel)return;//Quit if not found.
+	vector<float> point;
+	vector<Vector3f> vertices, faceVerts;
+	Vector2f *texcoords = NULL;
+	Vector3f *normals = NULL;
+	int geomobjectsCount = 1;
+	int materialNo = 0, index = 0;
+	int vertNum = 0, faceNum = 0;
+	bool counted = false;
+	Vector3f tmpPos, tmpRot;
+	float tmpRotAngle = 0;
+	string name;
+	GeomObject *parent = NULL;
+	free();
+	objects = new GeomObject[geomobjectsCount];
+	geomCount = geomobjectsCount;
+
+	string line;
+	vector<string> matNames = WallAirAbsorb::GetMatName();
+
+	index = 0;
+	int faceId = -1, matInd = -1;
+	while (getline(finModel, line))
+	{
+		if (line.size() >= 6 && line[0] == 'u' && line.substr(0, 6) == string("usemtl"))
+			matInd = strMatch(line.substr(7), WallAirAbsorb::GetMatName());
+		
+		if (line[0] == 'v' && line[1] == ' ')
+		{
+			point = getNumbers(line);
+			vertices.push_back(Vector3f(point[0] / 1e3, point[1] / 1e3, point[2] / 1e3));
+			vertNum++;
+			//cout << "vert " << vertNum << '\t';
+			//cout << point[0] << '\t' << point[1] << '\t' << point[2] << endl;
+		}
+		if (matInd < 0)continue;
+		if (line[0] == 'f')
+		{
+			faceId++;
+			if (faceId % 1)continue;
+			int vIndex;
+			point = getNumbers(line);
+			for (int i = 0; i < 3; i++)
+			{
+				vIndex = (int)point[i];
+				faceVerts.push_back(vertices[vIndex - 1]);
+				vertId.push_back(vIndex - 1);
+			}
+			faceNum++;
+			//cout << "\nface " << faceNum << '\t';
+			//cout << (int)point[0] << '\t' << (int)point[1] << '\t' << (int)point[2] << '\t' << matInd << endl;
+			matId.push_back(matInd);
+		}
+	}
+	//system("pause");
 	objects[geomobjectsCount - 1].set(faceVerts.size() / 3, &faceVerts[0], texcoords, normals, tmpPos, name, parent, tmpRot, tmpRotAngle);
 
 	finModel.close();

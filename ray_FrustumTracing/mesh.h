@@ -4,6 +4,7 @@
 #include <string>
 #include "utils.h"
 #include "geomObject.h"
+#include "dataBase.h"
 //#include "boundingBox.h"
 using namespace std;
 
@@ -27,6 +28,7 @@ public:
    @param texturePath - ścieżka do pliku .bmp zawierającego teksture
    @param folderPath - ścieżka do folderu zawierającego pliki obiektu*/
    Mesh(string id, string folderPath, vector<int>& vertId, bool alpha = false);
+   Mesh(string id, string folderPath, vector<int>& vertId, vector<int>& matId, bool alpha = false);
 /**
    Konstruktor (pseudo)kopiujący. Nie kopiuje nic, ustawia wszystkie pola na zero - nie wolno kopiować mesha!*/
    Mesh(const Mesh &mesh);
@@ -34,14 +36,11 @@ public:
    Destruktor zwalnia zarezerwowaną pamięć*/
    ~Mesh();
 /**
-   Metoda wczytuje informacje o obiekcie z pliku ASE
-   @param fileName - ścieżka do pliku ASE*/
-   void loadObject(string folderPath, bool alpha);
-/**
    Load mesh from simple text list of vertices and faces.
    */
-   void loadVert(string folderPath, vector<int>& vertId);
-   void loadObj(string folderPath, vector<int>& vertId);
+   void loadVert(string fileName, vector<int>& vertId);
+   void loadObj(string fileName, vector<int>& vertId);
+   void loadObj(string fileName, vector<int>& vertId, vector<int>& matId);
 /**
    Zwalnia pamięć*/
    void free();

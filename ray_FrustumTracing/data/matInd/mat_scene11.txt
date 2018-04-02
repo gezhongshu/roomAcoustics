@@ -1,8 +1,8 @@
 7
-./data/matLib/mat_scene11_linoleum.csv
-./data/matLib/mat_scene11_concrete.csv
-./data/matLib/mat_scene11_seating.csv
-./data/matLib/mat_scene11_brickwall.csv
-./data/matLib/mat_scene11_woodPanels.csv
-./data/matLib/mat_scene11_whitePanels.csv
-./data/matLib/mat_scene11_parquet.csv
+.\data\matLib\mat_scene11_linoleum.csv
+.\data\matLib\mat_scene11_concrete.csv
+.\data\matLib\mat_scene11_seating.csv
+.\data\matLib\mat_scene11_brickwall.csv
+.\data\matLib\mat_scene11_woodPanels.csv
+.\data\matLib\mat_scene11_whitePanels.csv
+.\data\matLib\mat_scene11_parquet.csv

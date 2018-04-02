@@ -10,20 +10,24 @@ OBBTree::~OBBTree()
 }
 
 
-bool OBBTree::ComputeOBBTree(TREE_CONDITION TreeCondition, int TreeConParam, float* tmpVert, int tmpCount, vector<int>& vertId, float tmpScale /* = 1.0f */)
+bool OBBTree::ComputeOBBTree(TREE_CONDITION TreeCondition, int TreeConParam, float* tmpVert, int tmpCount, vector<int>& vertId, vector<int>& matId, float tmpScale)
 {
 	condition = TreeCondition;
 	conParam = TreeConParam;
 	tree = new OBBTreeNode();
+	bool hasMat = matId.size() != 1;
+	int mId = -1;
+	if (hasMat)assert(vertId.size() / 3 == matId.size());
 	Vector4f *vertices = new Vector4f[tmpCount];
 	for (int i = 0; i < tmpCount; i++)
 		vertices[i] = Vector4f(tmpVert[3 * i], tmpVert[3 * i + 1], tmpVert[3 * i + 2]);
 	vector<faceInfo*> faceLink;
 	for (int i = 0; i < tmpCount / 3; i++)
 	{
+		if (hasMat)mId = matId[i];
 		float area = Vector4f::Cross3f(vertices[3 * i] * tmpScale - vertices[3 * i + 1] * tmpScale,
 			vertices[3 * i + 1] * tmpScale - vertices[3 * i + 2] * tmpScale).GetLenght() / 2;
-		faces[i] = faceInfo(i, (vertices[3 * i] + vertices[3 * i + 1] + vertices[3 * i + 2]) / 3, area);
+		faces[i] = faceInfo(i, mId, (vertices[3 * i] + vertices[3 * i + 1] + vertices[3 * i + 2]) / 3, area);
 		faces[i].verts.push_back(vertices[3 * i]*tmpScale);
 		faces[i].vertsId.push_back(vertId[3 * i]);
 		faces[i].verts.push_back(vertices[3 * i + 1] * tmpScale);

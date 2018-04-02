@@ -1,7 +1,7 @@
 6
-./data/matLib/mat_scene10_floor.csv
-./data/matLib/mat_scene10_seating.csv
-./data/matLib/mat_scene10_plaster.csv
-./data/matLib/mat_scene10_ceiling.csv
-./data/matLib/mat_scene10_stagePanels.csv
-./data/matLib/mat_scene10_structuredPlaster.csv
+.\data\matLib\mat_scene10_floor.csv
+.\data\matLib\mat_scene10_seating.csv
+.\data\matLib\mat_scene10_plaster.csv
+.\data\matLib\mat_scene10_ceiling.csv
+.\data\matLib\mat_scene10_stagePanels.csv
+.\data\matLib\mat_scene10_structuredPlaster.csv
