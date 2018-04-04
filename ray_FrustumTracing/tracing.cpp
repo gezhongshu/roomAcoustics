@@ -1,7 +1,7 @@
 #include "tracing.h"
 
 
-void Tracing::ReadPathAndColli(string filename, string destdir, vector<BiNode<Ray>*>& rays, int len)
+void Tracing::ReadPathAndColli(string filename, string destdir, vector<BiNode<Ray>*>& rays, Orient& s, int len)
 {
 	fstream fin(filename, ios::in);
 	int n; //Number of receivers
@@ -10,19 +10,19 @@ void Tracing::ReadPathAndColli(string filename, string destdir, vector<BiNode<Ra
 	fin >> n;
 	for (int i = 0; i < n; i++)
 	{
-		fin >> receiver[0] >> receiver[1] >> receiver[2] >>
-			front[0] >> front[1] >> front[2] >>
-			up[0] >> up[1] >> up[2];
-		hrir = vector<vector<double>>(len, vector<double>(2));
+		fin >> receiver[0] >> receiver[2] >> receiver[1] >>
+			front[0] >> front[2] >> front[1] >>
+			up[0] >> up[2] >> up[1];
+		hrir = vector<vector<double>>(len, vector<double>(1));
 		if (_access(destdir.c_str(), 6) == -1)_mkdir(destdir.c_str());
-		ofstream foutbin(destdir + to_string(i) + ".binary", ios::binary);
-		ColliReceiver(rays, receiver, front, up, hrir, foutbin);
-		foutbin.close();
-		/*ofstream fout(destdir + to_string(i) + ".dat", ios::binary);
+		ofstream fout(destdir + to_string(i) + ".binary", ios::binary);
+		ColliReceiver(rays, s, Orient(receiver, front, up), hrir, fout);
+		/*fout.close();
+		ofstream fout(destdir + to_string(i) + ".dat", ios::binary);*/
 		for (int k = 0; k < len; k++)
-		for (int l = 0; l < 2; l++)
-		fout.write((char*)&hrir[k][l], sizeof(double));
-		fout.close();*/
+			for (int l = 0; l < 1; l++)
+				fout.write((char*)&hrir[k][l], sizeof(double));
+		fout.close();
 	}
 	fin.close();
 }
@@ -30,17 +30,21 @@ void Tracing::ReadPathAndColli(string filename, string destdir, vector<BiNode<Ra
 void Tracing::ReadSourceAndTracing(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref, string fileIndex)
 {
 	int numSources;
-	string pathFile;
-	Vector4f source;
+	string fname, directFile, pathFile;
+	Vector4f source, front, up;
 	srand((int)time(0));
 	fstream fin(fileIndex, ios::in);
 	fin >> numSources;
 	for (int i = 0; i < numSources; i++)
 	{
-		fin >> source[0] >> source[1] >> source[2] >> pathFile;
+		fin >> fname >> source[0] >> source[2] >> source[1] 
+			>> front[0] >> front[2] >> front[1]
+			>> up[0] >> up[2] >> up[1]
+			>> directFile >> pathFile;
 		rays.clear();
 		TracingInRoom(rays, tree, ref, source);
-		ReadPathAndColli(pathFile, ".\\data\\brir\\Source_" + to_string(i) + "\\", rays, 16384);
+		Direct::LoadCSV(directFile);
+		ReadPathAndColli(pathFile, ".\\data\\brir\\Source_" + fname + "\\", rays, Orient(source, front, up), 16384);
 	}
 	fin.close();
 }
@@ -54,6 +58,8 @@ void Tracing::TracingInRoom(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref,
 	{
 		float theta = i*dTheta;
 		int m = round(2 * PI*sin(theta) / dTheta);
+		int totalTask = 0;
+		vector<thread> tasks;
 		for (float j = 0.5f; j < m; j++)
 		{
 			float phi = j*PI * 2 / m;
@@ -62,6 +68,10 @@ void Tracing::TracingInRoom(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref,
 			Ray ray = Ray(source, drct, amp);
 			OBBIntersection::CollisionTest(&ray, tree);
 			rays.push_back(new BiNode<Ray>(ray));
+			/*while (totalTask > thread::hardware_concurrency() * 2)_sleep(20);
+			totalTask++;
+			tasks.push_back(thread(RayTracingParallel, rays.back(), tree, ref, totalTask));
+			tasks.back().detach();*/
 			RayTracing(rays.back(), tree, ref);
 		}
 	}
@@ -77,6 +87,22 @@ void Tracing::RayTracing(BiNode<Ray>* pr, OBBTree * tree, int ref)
 		OBBIntersection::CollisionTest(&pr->right->data, tree);
 		Tracing::RayTracing(pr->right, tree, ref - 1);
 	}
+}
+
+void Tracing::RayTracingParallel(BiNode<Ray>* pr, OBBTree * tree, int ref, int & numThreads)
+{
+	cout << "Number of running threads: " << numThreads << endl;
+	if (pr->data.IsIntersect() && ref > 0)
+	{
+		Tracing::RefRay(pr, *pr->data.GetFace());
+		OBBIntersection::CollisionTest(&pr->left->data, tree);
+		Tracing::RayTracing(pr->left, tree, ref - 1);
+		OBBIntersection::CollisionTest(&pr->right->data, tree);
+		Tracing::RayTracing(pr->right, tree, ref - 1);
+	}
+	Tracing::mu.lock();
+	numThreads--;
+	Tracing::mu.unlock();
 }
 
 void Tracing::RefRay(BiNode<Ray>* pr, faceInfo & f)
@@ -110,41 +136,64 @@ void Tracing::RefRay(BiNode<Ray>* pr, faceInfo & f)
 	pr->right = new BiNode<Ray>(Ray(start, d1));
 }
 
-void Tracing::ColliReceiver(vector<BiNode<Ray>*>& rays, Vector4f rec, Vector4f front, Vector4f up, vector<vector<double>>& hrir, ofstream& fout)
+void Tracing::Traversal(BiNode<Ray>* ray, Orient & rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& scats, double length)
 {
-	int id, n = hrir.size();
-	double chordLen, proj, Amp, length, angleLim = 0.05;//0.05 means a diameter of 5 cm at 1 meter distance
-	Vector4f vec;
-	vector<vector<float>> hrir_s;
-	vector<double> href;
-	for (int i = 0; i < rays.size(); i++)
+	int mId = ray->data.GetFace()->m_id;
+	double len = length + ray->data.GetEnd();
+	if (!ray->left)
 	{
-		Amp = 1.f;
-		length = 0.f;
-		for (int j = 0; j < rays[i].size(); j++)
+		refs[mId]++;
+		Tracing::Traversal(ray->left, rec, sDrct, hrir, refs, scats, len);
+		refs[mId]--;
+	}
+	if (!ray->right)
+	{
+		scats[mId]++;
+		Tracing::Traversal(ray->left, rec, sDrct, hrir, refs, scats, len);
+		scats[mId]--;
+	}
+
+	int id, n = hrir.size();
+	double chordLen, proj, angleLim = 0.05;//0.05 means a diameter of 5 cm at 1 meter distance
+	Vector4f vec;
+	vector<double> bRef, hrir_s;
+	vector<COMPLEX> cRef;
+	Ray& r = ray->data;
+
+	vec = r.GetStartPt() - rec.GetPos();
+	proj = -Vector4f::Dot3f(vec, r.GetDirect());
+	chordLen = Vector4f::Cross3f(vec, r.GetDirect()).GetLenght();
+	//HRIR::JudgeDirection(vec, front, up, hrir_s);
+	len = length + vec.GetLenght();
+	id = (int)round(len * FS / SOUND_SPEED);
+	if (id >= n)return;
+	if (chordLen / vec.GetLenght() <= angleLim && proj > 0 && proj <= r.GetEnd())
+	{
+		bRef = WallAirAbsorb::Absorb(len, refs, scats);
+		for (int i = 0; i < bRef.size(); i++)
+			cRef.push_back(bRef[i] * sDrct[i]);
+		hrir_s = WallAirAbsorb::InterpIFFT(cRef);
+		for (int ihs = 0; ihs < hrir_s.size(); ihs++)
 		{
-			vec = rays[i][j].GetStartPt() - rec;
-			proj = -Vector4f::Dot3f(vec, rays[i][j].GetDirect());
-			chordLen = Vector4f::Cross3f(vec, rays[i][j].GetDirect()).GetLenght();
-			HRIR::JudgeDirection(vec, front, up, hrir_s);
-			int len = length + vec.GetLenght();
-			id = (int)round(len * FS / SOUND_SPEED);
-			if (id >= n)continue;
-			if (chordLen / vec.GetLenght() <= angleLim && proj > 0 && proj <= rays[i][j].GetEnd())
-			{
-				href = WallAirAbsorb::Absorb(len, i);
-				hrir_s = WallAirAbsorb::ConvHrir(href, hrir_s);
-				for (int ihs = 0; ihs < hrir_s.size(); ihs++)
-				{
-					if (id + ihs >= n)break;
-					hrir[id + ihs][0] += double(hrir_s[ihs][0]) * Amp / len;
-					hrir[id + ihs][1] += double(hrir_s[ihs][1]) * Amp / len;
-				}
-			}
-			Amp *= 0.8;
-			length += rays[i][j].GetEnd();
+			if (id + ihs >= n)break;
+			hrir[id + ihs][0] += hrir_s[ihs];
 		}
 	}
+	length += r.GetEnd();
+}
+
+void Tracing::ColliReceiver(vector<BiNode<Ray>*>& rays, Orient& s, Orient& r, vector<vector<double>>& hrir, ofstream& fout)
+{
+	
+	vector<COMPLEX> sDrct;
+	for (auto ray : rays)
+	{
+		vector<int> refs(WallAirAbsorb::GetMatNum(), 0), scats(WallAirAbsorb::GetMatNum(), 0);
+		Vector4f drct = ray->data.GetDirect();
+		sDrct = Direct::EvalAmp(s.LocalPolar(drct));
+		Tracing::Traversal(ray, r, sDrct, hrir, refs, scats, 0);
+	}
+
 }
 
 void Tracing::RayTracing(vector<Ray>& ray, OBBTree* tree, int ref)

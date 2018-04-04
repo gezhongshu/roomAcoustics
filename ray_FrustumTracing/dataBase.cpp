@@ -149,72 +149,83 @@ WallAirAbsorb::~WallAirAbsorb()
 {
 }
 
-vector<double> WallAirAbsorb::Absorb(double dist, int ref)
+vector<double> WallAirAbsorb::Absorb(double dist, vector<int>& refs, vector<int>& scats, int band)
 {
-	const int NRef = 512, RR = fq.size() - 1;
-	double nqst = fq.back(), halfI, halfIS, deltaX;
-	vector<double> href, fqN, window, bRef = bref[ref];
-	for (auto f : fq)
-		fqN.push_back(f / nqst);
-	halfI = NRef / 2;
-	halfIS = halfI - 1;
-	deltaX = (fqN.back() - fqN.front()) / halfI;
-	for (int i = 0; i <= NRef; i++)
-		window.push_back(0.5*(1 - cos(2 * pi * i / NRef)));
-	if (dist > 1)
+	// band < -1: 全频带, band == -1: 频带平均, band > -1: 单频带
+	vector<double> bRef;
+	if (band < -1)
+		bRef = vector<double>(fq.size(), 1);
+	else
+		bRef = vector<double>(1, 1);
+	double meanAir;
+	for (auto air : attenAir)
+		meanAir += pow(air, dist);
+	meanAir /= attenAir.size();
+	
+	if (dist > 1 && band < -1)
+	{
+		for (int mtl = 0; mtl < refs.size(); mtl++)
+			if (refs[mtl]>0)
+				for (int i = 0; i < bRef.size(); i++)
+					bRef[i] *= brefs[mtl][refs[mtl]][i];
+		for (int mtl = 0; mtl < scats.size(); mtl++)
+			if (scats[mtl]>0)
+				for (int i = 0; i < bRef.size(); i++)
+					bRef[i] *= srefs[mtl][scats[mtl]][i];
 		for (int i = 0; i < bRef.size(); i++)
 			bRef[i] *= pow(attenAir[i], dist) / dist;
-	assert(bRef.size() == fqN.size());
-	int r = 0, nn = 0;
-	double ndx = nn*deltaX;
-	vector<double> yy;
-	yy.reserve(NRef + 1);
-	while (r<RR)
-	{
-		while (ndx<fqN[r+1])
-		{
-			yy.push_back(bRef[r] + (ndx - fqN[r])*(bRef[r + 1] - bRef[r]) / (fqN[r + 1] - fqN[r]));
-			nn++;
-			ndx = nn*deltaX;
-		}
-		r++;
 	}
-	yy.push_back(bRef.back());
-	for (int i = halfIS; i > 0; i--)
-		yy.push_back(yy[i]);
-	COMPLEX *Fref, *Tref;
-	Tref = (COMPLEX *)malloc(sizeof(COMPLEX)*NRef);
-	Fref = (COMPLEX *)malloc(sizeof(COMPLEX)*NRef);
-	assert(NRef == yy.size());
-	for (int i = 0; i < NRef; i++)
+	else if (dist > 1 && band >= 0)
 	{
-		Fref[i].re = yy[i];
-		Fref[i].im = 0;
+		for (int mtl = 0; mtl < refs.size(); mtl++)
+			if (refs[mtl]>0)
+				bRef[0] *= brefs[mtl][refs[mtl]][band];
+		for (int mtl = 0; mtl < scats.size(); mtl++)
+			if (scats[mtl]>0)
+				bRef[0] *= srefs[mtl][scats[mtl]][band];
+		bRef[0] *= pow(attenAir[band], dist) / dist;
 	}
-	IFFT(Fref, Tref, 9);
-	for (int i = halfI; i < NRef; i++)
-		href.push_back(Tref[i].re);
-	for (int i = 0; i <= halfI; i++)
-		href.push_back(Tref[i].re);
-	for (int i = 0; i < href.size(); i++)
-		href[i] *= window[i];
-	free(Tref);
-	free(Fref);
-	return href;
+	else if(dist>1)
+	{
+		for (int mtl = 0; mtl < refs.size(); mtl++)
+			bRef[0] *= brefs[mtl][0][refs[mtl]] * srefs[mtl][0][scats[mtl]];
+		bRef[0] *= meanAir / dist;
+	}
+	return bRef;
 }
 
 void WallAirAbsorb::Init(int ref)
 {
-	vector<double> btmp;
-	for (auto al : alpha[0])
-		btmp.push_back(sqrt(1 - al));
 	for (auto f : fq)
-		attenAir.push_back(exp(-0.5 * 5.54e-4 * (50 / 50)*pow((f > 10000 ? 10000 : f)/1000, 1.7)));
-	bref = vector<vector<double>>(ref + 1, vector<double>(btmp.size(), 1));
-	for (int i = 0; i < ref; i++)
-		for (int j = 0; j < btmp.size(); j++)
-			bref[i + 1][j] = bref[i][j] * btmp[j];
-
+		attenAir.push_back(exp(-0.5 * 5.54e-4 * (50 / 50)*pow((f > 10000 ? 10000 : f) / 1000, 1.7)));
+	int id = 0;
+	for (auto alph : alpha)
+	{
+		vector<double> btmp;
+		double meanB, meanS;
+		for (auto al : alph)
+			btmp.push_back(sqrt(1 - al));
+		for (int i = 0; i < btmp.size();i++)
+		{
+			meanB += btmp[i];
+			meanS += scatter[id][i];
+		}
+		meanB /= btmp.size();
+		meanS /= btmp.size();
+		brefs.push_back(vector<vector<double>>(ref + 1, vector<double>(btmp.size(), 1)));
+		srefs.push_back(brefs.back());
+		for (int i = 0; i < ref; i++)
+		{
+			for (int j = 0; j < btmp.size(); j++) // 分频带多次反射、散射系数
+			{
+				brefs.back()[i + 1][j] = brefs.back()[i][j] * btmp[j];
+				srefs.back()[i + 1][j] = srefs.back()[i][j] * scatter[id][j];
+			}
+			brefs.back()[0][i + 1] = brefs.back()[0][i] * meanB; // 频带平均多次反射系数
+			srefs.back()[0][i + 1] = srefs.back()[0][i] * meanS; // 频带平均多次散射系数
+		}
+		id++;
+	}
 }
 
 void WallAirAbsorb::LoadMat(vector<string> fileNames)
@@ -286,11 +297,68 @@ vector<vector<float>> WallAirAbsorb::ConvHrir(vector<double> filter, vector<vect
 	return hrirFiltered;
 }
 
+vector<double> WallAirAbsorb::InterpIFFT(vector<COMPLEX> fqValues, vector<double> fqs)
+{
+	const int NRef = 512, RR = fqs.size() - 1;
+	double nqst = fqs.back(), halfI, halfIS, deltaX;
+	vector<double> href, fqN, window;
+	fqN.push_back(0);
+	fqValues.insert(fqValues.begin(), COMPLEX(0, 0));
+	for (auto f : fqs)
+		fqN.push_back(f / nqst);
+	fqN.push_back(FS);
+	fqValues.push_back(COMPLEX(0, 0));
+
+	halfI = NRef / 2;
+	halfIS = halfI - 1;
+	deltaX = (fqN.back() - fqN.front()) / halfI;
+	for (int i = 0; i <= NRef; i++)
+		window.push_back(0.5*(1 - cos(2 * pi * i / NRef)));
+
+	assert(fqValues.size() == fqN.size());
+	int r = 0, nn = 0;
+	double ndx = nn*deltaX;
+	vector<COMPLEX> yy;
+	yy.reserve(NRef + 1);
+	while (r<RR)
+	{
+		while (ndx<fqN[r + 1])
+		{
+			yy.push_back(fqValues[r] + 1 / (fqN[r + 1] - fqN[r]) * (ndx - fqN[r])*(fqValues[r + 1] - fqValues[r]));
+			nn++;
+			ndx = nn*deltaX;
+		}
+		r++;
+	}
+	yy.push_back(fqValues.back());
+	for (int i = halfIS; i > 0; i--)
+		yy.push_back(COMPLEX(yy[i].re, -yy[i].im));
+	COMPLEX *Fref, *Tref;
+	Tref = (COMPLEX *)malloc(sizeof(COMPLEX)*NRef);
+	Fref = (COMPLEX *)malloc(sizeof(COMPLEX)*NRef);
+	assert(NRef == yy.size());
+	for (int i = 0; i < NRef; i++)
+	{
+		Fref[i] = yy[i];
+	}
+	IFFT(Fref, Tref, 9);
+	for (int i = halfI; i < NRef; i++)
+		href.push_back(Tref[i].re);
+	for (int i = 0; i <= halfI; i++)
+		href.push_back(Tref[i].re);
+	for (int i = 0; i < href.size(); i++)
+		href[i] *= window[i];
+	free(Tref);
+	free(Fref);
+	return vector<double>();
+}
+
 vector<string> WallAirAbsorb::matName = vector<string>(1, string("data\\matLib\\mat_scene09_concrete.csv"));
-vector<vector<double>> WallAirAbsorb::alpha = { { 0.36, 0.36, 0.36, 0.45, 0.51, 0.64, 0.51, 0.51 } };
+vector<vector<double>> WallAirAbsorb::alpha = { { 0.36, 0.36, 0.45, 0.51, 0.64, 0.51 } };
 vector<double> WallAirAbsorb::attenAir = vector<double>();
-vector<double> WallAirAbsorb::fq = {0, 125, 250, 500, 1000, 2000, 4000, 24e3};
-vector<vector<double>> WallAirAbsorb::bref = vector<vector<double>>();
+vector<double> WallAirAbsorb::fq = {125, 250, 500, 1000, 2000, 4000};
+vector<vector<vector<double>>> WallAirAbsorb::brefs = vector<vector<vector<double>>>();
+vector<vector<vector<double>>> WallAirAbsorb::srefs = vector<vector<vector<double>>>();
 vector<vector<double>> WallAirAbsorb::scatter = vector<vector<double>>();
 
 

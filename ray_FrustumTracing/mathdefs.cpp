@@ -404,6 +404,11 @@ COMPLEX Add(COMPLEX c1, COMPLEX c2)
 	return c;
 }
 
+COMPLEX operator+(COMPLEX c1, COMPLEX c2) 
+{
+	return COMPLEX(c1.re + c2.re, c1.im + c2.im);
+}
+
 //复数乘运算
 COMPLEX Mul(COMPLEX c1, COMPLEX c2)
 {
@@ -413,6 +418,11 @@ COMPLEX Mul(COMPLEX c1, COMPLEX c2)
 	return c;
 }
 
+COMPLEX operator*(double d, COMPLEX c)
+{
+	return COMPLEX(c.re*d, c.im*d);
+}
+
 //复数减运算
 COMPLEX Sub(COMPLEX c1, COMPLEX c2)
 {
@@ -420,6 +430,11 @@ COMPLEX Sub(COMPLEX c1, COMPLEX c2)
 	c.re = c1.re - c2.re;
 	c.im = c1.im - c2.im;
 	return c;
+}
+
+COMPLEX operator-(COMPLEX c1, COMPLEX c2)
+{
+	return Sub(c1, c2);
 }
 
 //快速傅里叶变换

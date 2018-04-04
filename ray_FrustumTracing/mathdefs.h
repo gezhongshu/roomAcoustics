@@ -151,20 +151,26 @@ public:
 const double pi = 3.14159265359;
 
 //复数定义
-typedef struct
+typedef struct COMPLEX
 {
 	double re;
 	double im;
-}COMPLEX;
+
+	COMPLEX() :re(0), im(0) {};
+	COMPLEX(double re, double im) :re(re), im(im) {};
+};
 
 //复数加运算
 COMPLEX Add(COMPLEX c1, COMPLEX c2);
+COMPLEX operator+(COMPLEX c1, COMPLEX c2);
 
 //复数乘运算
 COMPLEX Mul(COMPLEX c1, COMPLEX c2);
+COMPLEX operator*(double d, COMPLEX c);
 
 //复数减运算
 COMPLEX Sub(COMPLEX c1, COMPLEX c2);
+COMPLEX operator-(COMPLEX c1, COMPLEX c2);
 
 //快速傅里叶变换
 void FFT(COMPLEX *TD, COMPLEX *FD, int power);

@@ -34,16 +34,20 @@ public:
 	WallAirAbsorb();
 	~WallAirAbsorb();
 	inline static vector<string> GetMatName() { return matName; };
-	static vector<double> Absorb(double dist, int ref);
+	inline static int GetMatNum() { return matName.size(); };
+	static vector<double> Absorb(double dist, vector<int>& refs, vector<int>& scats, int band = -2);
 	static void Init(int ref);
 	static void LoadwithFileList(string fileName);
 	static void LoadMat(vector<string> fileNames);
 	static vector<vector<float>> ConvHrir(vector<double> filter, vector<vector<float>> hrir);
+	static vector<double> GetRefAmp(vector<int>& refs, vector<int>& scats);
+	static vector<double> InterpIFFT(vector<COMPLEX> fqValues, vector<double> fqs = fq);
 
 private:
 	static vector<string> matName;
 	static vector<double> fq, attenAir;
-	static vector<vector<double>> alpha, bref, scatter;
+	static vector<vector<double>> alpha, scatter;
+	static vector<vector<vector<double>>> brefs, srefs;
 };
 
 class Direct
@@ -67,6 +71,7 @@ public:
 	Orient(Vector4f p, Vector4f f, Vector4f u);
 	Orient(Vector4f p);
 	vector<int> LocalPolar(Vector4f vec);
+	inline Vector4f GetPos() { return position; }
 
 private:
 	Vector4f position, front, up, right;
