@@ -15,17 +15,18 @@
 #include "obbTree.h"
 #include "mathdefs.h"
 #include "dataBase.h"
+#include "utils.h"
 
 namespace Tracing
 {
-	mutex mu;
 	void ReadPathAndColli(string filename, string destdir, vector<BiNode<Ray>*>& rays, Orient& s, int len);
 	void ReadSourceAndTracing(vector<BiNode<Ray>*>& rays, OBBTree* tree, int ref, string fileIndex);
 	void TracingInRoom(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref, Vector4f s, int nCircle = 150);
 	void RayTracing(BiNode<Ray> * pr, OBBTree * tree, int ref);
-	void RayTracingParallel(BiNode<Ray> * pr, OBBTree * tree, int ref, int& numThreads);
+	void RayTracingParallel(BiNode<Ray> * pr, OBBTree * tree, int ref, int* numThreads);
 	void RefRay(BiNode<Ray>* pr, faceInfo& f);
 	void Traversal(BiNode<Ray>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& scats, double len = 0);
+	void TraversalParallel(int *threadNum, BiNode<Ray>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& scats, double len = 0);
 	void ColliReceiver(vector<BiNode<Ray>*>& rays, Orient& s, Orient& r, vector<vector<double>>& hrir, ofstream& fout);
 
 	void RayTracing(vector<Ray> &ray, OBBTree* tree, int ref);

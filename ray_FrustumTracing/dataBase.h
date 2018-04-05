@@ -40,14 +40,14 @@ public:
 	static void LoadwithFileList(string fileName);
 	static void LoadMat(vector<string> fileNames);
 	static vector<vector<float>> ConvHrir(vector<double> filter, vector<vector<float>> hrir);
-	static vector<double> GetRefAmp(vector<int>& refs, vector<int>& scats);
+	static vector<double> FreqMult(double coef);
 	static vector<double> InterpIFFT(vector<COMPLEX> fqValues, vector<double> fqs = fq);
 
 private:
 	static vector<string> matName;
 	static vector<double> fq, attenAir;
 	static vector<vector<double>> alpha, scatter;
-	static vector<vector<vector<double>>> brefs, srefs;
+	static vector<vector<vector<double>>> brefs, scatters, mirrors;
 };
 
 class Direct
@@ -56,6 +56,7 @@ public:
 	Direct();
 	~Direct();
 	static void LoadCSV(string fileName);
+	static void paraLoad(string fineName, bool * complete);
 	static vector<COMPLEX> EvalAmp(int azim, int elev);
 	static vector<COMPLEX> EvalAmp(vector<int> polar);
 

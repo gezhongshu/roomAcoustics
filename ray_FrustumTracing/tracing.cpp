@@ -1,5 +1,9 @@
+#include <Windows.h>
 #include "tracing.h"
 
+
+mutex mu_thread, mu_hrir;
+int maxThread = thread::hardware_concurrency();
 
 void Tracing::ReadPathAndColli(string filename, string destdir, vector<BiNode<Ray>*>& rays, Orient& s, int len)
 {
@@ -25,6 +29,8 @@ void Tracing::ReadPathAndColli(string filename, string destdir, vector<BiNode<Ra
 		fout.close();
 	}
 	fin.close();
+	for (auto ray : rays)
+		ray->relase();
 }
 
 void Tracing::ReadSourceAndTracing(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref, string fileIndex)
@@ -42,16 +48,21 @@ void Tracing::ReadSourceAndTracing(vector<BiNode<Ray>*>& rays, OBBTree * tree, i
 			>> up[0] >> up[2] >> up[1]
 			>> directFile >> pathFile;
 		rays.clear();
+		cout << "\nCalculating source: " << i + 1 << " / " << numSources << endl << endl;
+		bool complete = false;
+		thread task(Direct::paraLoad, directFile, &complete);
+		task.detach();
 		TracingInRoom(rays, tree, ref, source);
-		Direct::LoadCSV(directFile);
-		ReadPathAndColli(pathFile, ".\\data\\brir\\Source_" + fname + "\\", rays, Orient(source, front, up), 16384);
+		//Direct::LoadCSV(directFile);
+		while (!complete) Sleep(1);
+		ReadPathAndColli(pathFile, ".\\data\\RIR\\Source_" + fname + "\\", rays, Orient(source, front, up), 16384);
 	}
 	fin.close();
 }
 
 void Tracing::TracingInRoom(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref, Vector4f s, int nCircle)
 {
-	//int nCircle = 4;
+	//nCircle = 4;
 	float dTheta = PI / nCircle;
 	Vector4f source = s;
 	for (float i = 0.5f; i < nCircle; i++)
@@ -64,16 +75,27 @@ void Tracing::TracingInRoom(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref,
 		{
 			float phi = j*PI * 2 / m;
 			Vector4f drct = Vector4f(sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta));
-			double amp = DirectBeam(drct);
-			Ray ray = Ray(source, drct, amp);
+			//double amp = DirectBeam(drct);
+			Ray ray = Ray(source, drct);
 			OBBIntersection::CollisionTest(&ray, tree);
 			rays.push_back(new BiNode<Ray>(ray));
-			/*while (totalTask > thread::hardware_concurrency() * 2)_sleep(20);
+			while (totalTask > maxThread) Sleep(1);
+			//cout << "max threads: " << thread::hardware_concurrency() * 2 << endl;
+			mu_thread.lock();
 			totalTask++;
-			tasks.push_back(thread(RayTracingParallel, rays.back(), tree, ref, totalTask));
-			tasks.back().detach();*/
-			RayTracing(rays.back(), tree, ref);
+			string s;
+			s = "Running: " + to_string(int(i + 1)) + " / " + to_string(nCircle)
+				+ ", number of threads: " + to_string(totalTask);
+			for (int i = 0; i < s.size(); i++)
+				printf("\b");
+			//cout << s << flush;
+			printf("%s", s.c_str());
+			mu_thread.unlock();
+			tasks.push_back(thread(RayTracingParallel, rays.back(), tree, ref, &totalTask));
+			tasks.back().detach();
+			//RayTracing(rays.back(), tree, ref);
 		}
+		while (totalTask > 0) Sleep(1);
 	}
 }
 
@@ -89,9 +111,8 @@ void Tracing::RayTracing(BiNode<Ray>* pr, OBBTree * tree, int ref)
 	}
 }
 
-void Tracing::RayTracingParallel(BiNode<Ray>* pr, OBBTree * tree, int ref, int & numThreads)
+void Tracing::RayTracingParallel(BiNode<Ray>* pr, OBBTree * tree, int ref, int * numThreads)
 {
-	cout << "Number of running threads: " << numThreads << endl;
 	if (pr->data.IsIntersect() && ref > 0)
 	{
 		Tracing::RefRay(pr, *pr->data.GetFace());
@@ -100,9 +121,9 @@ void Tracing::RayTracingParallel(BiNode<Ray>* pr, OBBTree * tree, int ref, int &
 		OBBIntersection::CollisionTest(&pr->right->data, tree);
 		Tracing::RayTracing(pr->right, tree, ref - 1);
 	}
-	Tracing::mu.lock();
-	numThreads--;
-	Tracing::mu.unlock();
+	mu_thread.lock();
+	(*numThreads)--;
+	mu_thread.unlock();
 }
 
 void Tracing::RefRay(BiNode<Ray>* pr, faceInfo & f)
@@ -140,21 +161,21 @@ void Tracing::Traversal(BiNode<Ray>* ray, Orient & rec, const vector<COMPLEX>& s
 {
 	int mId = ray->data.GetFace()->m_id;
 	double len = length + ray->data.GetEnd();
-	if (!ray->left)
-	{
-		refs[mId]++;
-		Tracing::Traversal(ray->left, rec, sDrct, hrir, refs, scats, len);
-		refs[mId]--;
-	}
-	if (!ray->right)
+	refs[mId]++;
+	if (ray->left)
 	{
 		scats[mId]++;
 		Tracing::Traversal(ray->left, rec, sDrct, hrir, refs, scats, len);
 		scats[mId]--;
 	}
+	if (ray->right)
+	{
+		Tracing::Traversal(ray->left, rec, sDrct, hrir, refs, scats, len);
+	}
+	refs[mId]--;
 
 	int id, n = hrir.size();
-	double chordLen, proj, angleLim = 0.05;//0.05 means a diameter of 5 cm at 1 meter distance
+	double chordLen, proj, angleLim = 0.01;//0.05 means a diameter of 5 cm at 1 meter distance
 	Vector4f vec;
 	vector<double> bRef, hrir_s;
 	vector<COMPLEX> cRef;
@@ -167,33 +188,64 @@ void Tracing::Traversal(BiNode<Ray>* ray, Orient & rec, const vector<COMPLEX>& s
 	len = length + vec.GetLenght();
 	id = (int)round(len * FS / SOUND_SPEED);
 	if (id >= n)return;
-	if (chordLen / vec.GetLenght() <= angleLim && proj > 0 && proj <= r.GetEnd())
+	if (chordLen / len <= angleLim && proj > 0 && proj <= r.GetEnd())
 	{
+		double delay = id - len * FS / SOUND_SPEED;
+		vector<double> phaseAdj = WallAirAbsorb::FreqMult(delay * 2 * pi / FS);
 		bRef = WallAirAbsorb::Absorb(len, refs, scats);
 		for (int i = 0; i < bRef.size(); i++)
-			cRef.push_back(bRef[i] * sDrct[i]);
+			cRef.push_back(COMPLEX(bRef[i] * sDrct[i].re * cos(phaseAdj[i]), bRef[i] * sDrct[i].im*sin(phaseAdj[i])));
 		hrir_s = WallAirAbsorb::InterpIFFT(cRef);
 		for (int ihs = 0; ihs < hrir_s.size(); ihs++)
 		{
-			if (id + ihs >= n)break;
-			hrir[id + ihs][0] += hrir_s[ihs];
+			int ind = id + ihs - hrir_s.size() / 2;
+			if (ind >= n)break;
+			if (ind < 0)continue;
+			mu_hrir.lock();
+			hrir[ind][0] += hrir_s[ihs];
+			mu_hrir.unlock();
 		}
 	}
-	length += r.GetEnd();
+}
+
+void Tracing::TraversalParallel(int * numThreads, BiNode<Ray>* ray, Orient & rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& scats, double len)
+{
+	Tracing::Traversal(ray, rec, sDrct, hrir, refs, scats, 0);
+	mu_thread.lock();
+	(*numThreads)--;
+	mu_thread.unlock();
 }
 
 void Tracing::ColliReceiver(vector<BiNode<Ray>*>& rays, Orient& s, Orient& r, vector<vector<double>>& hrir, ofstream& fout)
 {
 	
 	vector<COMPLEX> sDrct;
+	cout << endl;
+	int totalTask = 0, numRay = 0;
+	vector<thread> tasks;
 	for (auto ray : rays)
 	{
+		numRay++;
 		vector<int> refs(WallAirAbsorb::GetMatNum(), 0), scats(WallAirAbsorb::GetMatNum(), 0);
 		Vector4f drct = ray->data.GetDirect();
 		sDrct = Direct::EvalAmp(s.LocalPolar(drct));
 		Tracing::Traversal(ray, r, sDrct, hrir, refs, scats, 0);
+		//while (totalTask > maxThread) Sleep(1);
+		//mu_thread.lock();
+		//totalTask++;
+		string s;
+		s = "Running: " + to_string(numRay) + " / " + to_string(rays.size())
+			+ ", number of threads: " + to_string(totalTask);
+		for (int i = 0; i < s.size(); i++)
+			printf("\b");
+		//cout << s << flush;
+		printf("%s", s.c_str());
+		//mu_thread.unlock();
+		//tasks.push_back(thread(TraversalParallel, &totalTask, ray, r, sDrct, hrir, refs, scats, 0));
+		//tasks.back().detach();
 	}
-
+	//while (totalTask > 0) Sleep(1);
+	cout << endl;
 }
 
 void Tracing::RayTracing(vector<Ray>& ray, OBBTree* tree, int ref)

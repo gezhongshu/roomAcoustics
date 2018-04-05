@@ -127,6 +127,7 @@ WallAirAbsorb::WallAirAbsorb()
 
 void WallAirAbsorb::LoadwithFileList(string fileName)
 {
+	cout << "\nLoading materials ..." << endl;
 	fstream fin(fileName, ios::in);
 	int matNum, last;
 	string line;
@@ -157,7 +158,7 @@ vector<double> WallAirAbsorb::Absorb(double dist, vector<int>& refs, vector<int>
 		bRef = vector<double>(fq.size(), 1);
 	else
 		bRef = vector<double>(1, 1);
-	double meanAir;
+	double meanAir = 0;
 	for (auto air : attenAir)
 		meanAir += pow(air, dist);
 	meanAir /= attenAir.size();
@@ -168,10 +169,17 @@ vector<double> WallAirAbsorb::Absorb(double dist, vector<int>& refs, vector<int>
 			if (refs[mtl]>0)
 				for (int i = 0; i < bRef.size(); i++)
 					bRef[i] *= brefs[mtl][refs[mtl]][i];
-		for (int mtl = 0; mtl < scats.size(); mtl++)
-			if (scats[mtl]>0)
-				for (int i = 0; i < bRef.size(); i++)
-					bRef[i] *= srefs[mtl][scats[mtl]][i];
+		if (band == -2)
+		{
+			for (int mtl = 0; mtl < scats.size(); mtl++)
+				if (scats[mtl] > 0)
+					for (int i = 0; i < bRef.size(); i++)
+						bRef[i] *= scatters[mtl][scats[mtl]][i];
+			for (int mtl = 0; mtl < scats.size(); mtl++)
+				if (refs[mtl] - scats[mtl] > 0)
+					for (int i = 0; i < bRef.size(); i++)
+						bRef[i] *= mirrors[mtl][refs[mtl] - scats[mtl]][i];
+		}
 		for (int i = 0; i < bRef.size(); i++)
 			bRef[i] *= pow(attenAir[i], dist) / dist;
 	}
@@ -182,13 +190,17 @@ vector<double> WallAirAbsorb::Absorb(double dist, vector<int>& refs, vector<int>
 				bRef[0] *= brefs[mtl][refs[mtl]][band];
 		for (int mtl = 0; mtl < scats.size(); mtl++)
 			if (scats[mtl]>0)
-				bRef[0] *= srefs[mtl][scats[mtl]][band];
+				bRef[0] *= scatters[mtl][scats[mtl]][band];
+		for (int mtl = 0; mtl < scats.size(); mtl++)
+			if (refs[mtl] - scats[mtl]>0)
+				bRef[0] *= mirrors[mtl][refs[mtl] - scats[mtl]][band];
 		bRef[0] *= pow(attenAir[band], dist) / dist;
 	}
 	else if(dist>1)
 	{
 		for (int mtl = 0; mtl < refs.size(); mtl++)
-			bRef[0] *= brefs[mtl][0][refs[mtl]] * srefs[mtl][0][scats[mtl]];
+			bRef[0] *= brefs[mtl][0][refs[mtl]] * scatters[mtl][0][scats[mtl]]
+				* mirrors[mtl][0][refs[mtl] - scats[mtl]];
 		bRef[0] *= meanAir / dist;
 	}
 	return bRef;
@@ -202,7 +214,7 @@ void WallAirAbsorb::Init(int ref)
 	for (auto alph : alpha)
 	{
 		vector<double> btmp;
-		double meanB, meanS;
+		double meanB = 0, meanS = 0, meanM = 0;
 		for (auto al : alph)
 			btmp.push_back(sqrt(1 - al));
 		for (int i = 0; i < btmp.size();i++)
@@ -212,17 +224,21 @@ void WallAirAbsorb::Init(int ref)
 		}
 		meanB /= btmp.size();
 		meanS /= btmp.size();
+		meanM = 1 - meanS;
 		brefs.push_back(vector<vector<double>>(ref + 1, vector<double>(btmp.size(), 1)));
-		srefs.push_back(brefs.back());
+		scatters.push_back(brefs.back());
+		mirrors.push_back(brefs.back());
 		for (int i = 0; i < ref; i++)
 		{
 			for (int j = 0; j < btmp.size(); j++) // 分频带多次反射、散射系数
 			{
 				brefs.back()[i + 1][j] = brefs.back()[i][j] * btmp[j];
-				srefs.back()[i + 1][j] = srefs.back()[i][j] * scatter[id][j];
+				scatters.back()[i + 1][j] = scatters.back()[i][j] * scatter[id][j];
+				mirrors.back()[i + 1][j] = mirrors.back()[i][j] * (1 - scatter[id][j]);
 			}
 			brefs.back()[0][i + 1] = brefs.back()[0][i] * meanB; // 频带平均多次反射系数
-			srefs.back()[0][i + 1] = srefs.back()[0][i] * meanS; // 频带平均多次散射系数
+			scatters.back()[0][i + 1] = scatters.back()[0][i] * meanS; // 频带平均多次散射系数
+			mirrors.back()[0][i + 1] = mirrors.back()[0][i] * meanM; // 频带平均多次镜面反射系数
 		}
 		id++;
 	}
@@ -297,18 +313,27 @@ vector<vector<float>> WallAirAbsorb::ConvHrir(vector<double> filter, vector<vect
 	return hrirFiltered;
 }
 
+vector<double> WallAirAbsorb::FreqMult(double coef)
+{
+	vector<double> res;
+	for (auto f : fq)
+		res.push_back(f*coef);
+	return res;
+}
+
 vector<double> WallAirAbsorb::InterpIFFT(vector<COMPLEX> fqValues, vector<double> fqs)
 {
-	const int NRef = 512, RR = fqs.size() - 1;
-	double nqst = fqs.back(), halfI, halfIS, deltaX;
+	const int NRef = 2048;
+	double nqst = FS / 2, halfI, halfIS, deltaX;
 	vector<double> href, fqN, window;
 	fqN.push_back(0);
 	fqValues.insert(fqValues.begin(), COMPLEX(0, 0));
 	for (auto f : fqs)
-		fqN.push_back(f / nqst);
-	fqN.push_back(FS);
+		fqN.push_back(f);
+	fqN.push_back(nqst);
 	fqValues.push_back(COMPLEX(0, 0));
 
+	int RR = fqN.size() - 1;
 	halfI = NRef / 2;
 	halfIS = halfI - 1;
 	deltaX = (fqN.back() - fqN.front()) / halfI;
@@ -341,7 +366,7 @@ vector<double> WallAirAbsorb::InterpIFFT(vector<COMPLEX> fqValues, vector<double
 	{
 		Fref[i] = yy[i];
 	}
-	IFFT(Fref, Tref, 9);
+	IFFT(Fref, Tref, 11);
 	for (int i = halfI; i < NRef; i++)
 		href.push_back(Tref[i].re);
 	for (int i = 0; i <= halfI; i++)
@@ -350,7 +375,7 @@ vector<double> WallAirAbsorb::InterpIFFT(vector<COMPLEX> fqValues, vector<double
 		href[i] *= window[i];
 	free(Tref);
 	free(Fref);
-	return vector<double>();
+	return href;
 }
 
 vector<string> WallAirAbsorb::matName = vector<string>(1, string("data\\matLib\\mat_scene09_concrete.csv"));
@@ -358,7 +383,8 @@ vector<vector<double>> WallAirAbsorb::alpha = { { 0.36, 0.36, 0.45, 0.51, 0.64, 
 vector<double> WallAirAbsorb::attenAir = vector<double>();
 vector<double> WallAirAbsorb::fq = {125, 250, 500, 1000, 2000, 4000};
 vector<vector<vector<double>>> WallAirAbsorb::brefs = vector<vector<vector<double>>>();
-vector<vector<vector<double>>> WallAirAbsorb::srefs = vector<vector<vector<double>>>();
+vector<vector<vector<double>>> WallAirAbsorb::scatters = vector<vector<vector<double>>>();
+vector<vector<vector<double>>> WallAirAbsorb::mirrors = vector<vector<vector<double>>>();
 vector<vector<double>> WallAirAbsorb::scatter = vector<vector<double>>();
 
 
@@ -379,6 +405,7 @@ void Direct::LoadCSV(string fileName)
 			return;
 		else
 			type = name;
+	cout << "\nLoading the source directional file ..." << endl;
 	fstream fin(fileName, ios::in);
 	COMPLEX temp;
 	string line;
@@ -394,6 +421,13 @@ void Direct::LoadCSV(string fileName)
 		for (auto v : values)
 			if (getNumbers(v, temp)) directions[phi][theta].push_back(temp);
 	}
+	cout << "\nDirectional file loaded." << endl;
+}
+
+void Direct::paraLoad(string fileName, bool * complete)
+{
+	LoadCSV(fileName);
+	*complete = true;
 }
 
 vector<COMPLEX> Direct::EvalAmp(int azim, int elev)
