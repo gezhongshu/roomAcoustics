@@ -1,9 +1,9 @@
 #include "frustum.h"
 
 
-Ray::Ray() : startPoint(Vector4f(0.f)),direct(Vector4f(0.f,.8f,-.6f)),amp(1.f),begin(1e-8f),end(1.0e6f), intersectFace(NULL),intersected(false){}
+Ray::Ray() : startPoint(Vector4f(0.f)),direct(Vector4f(0.f,.8f,-.6f)),distTotal(0.f),begin(1e-8f),end(1.0e6f), intersectFace(NULL),intersected(false){}
 
-Ray::Ray(Vector4f start, Vector4f drct, float amp) : startPoint(start), direct(drct), amp(amp), begin(1e-6f), end(1.0e6f), intersectFace(NULL), intersected(false)
+Ray::Ray(Vector4f start, Vector4f drct, float dist) : startPoint(start), direct(drct), distTotal(dist), begin(1e-6f), end(1.0e6f), intersectFace(NULL), intersected(false)
 {
 }
 

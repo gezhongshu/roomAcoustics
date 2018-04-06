@@ -55,7 +55,7 @@ void Tracing::ReadSourceAndTracing(vector<BiNode<Ray>*>& rays, OBBTree * tree, i
 		TracingInRoom(rays, tree, ref, source);
 		//Direct::LoadCSV(directFile);
 		while (!complete) Sleep(1);
-		ReadPathAndColli(pathFile, ".\\data\\RIR\\Source_" + fname + "\\", rays, Orient(source, front, up), 16384);
+		ReadPathAndColli(pathFile, ".\\data\\RIR\\Ray_" + fname + "\\", rays, Orient(source, front, up), 16384);
 	}
 	fin.close();
 }
@@ -101,11 +101,17 @@ void Tracing::TracingInRoom(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref,
 
 void Tracing::RayTracing(BiNode<Ray>* pr, OBBTree * tree, int ref)
 {
-	if (pr->data.IsIntersect() && ref > 0)
+	if (pr->data.GetDist() < MAX_DIST && pr->data.IsIntersect() && ref > 0)
 	{
-		Tracing::RefRay(pr, *pr->data.GetFace());
-		OBBIntersection::CollisionTest(& pr->left->data, tree);
+		Tracing::RefRay(pr, *pr->data.GetFace(), pr->data.GetDist());
+		OBBIntersection::CollisionTest(&pr->left->data, tree);
 		Tracing::RayTracing(pr->left, tree, ref - 1);
+		OBBIntersection::CollisionTest(&pr->right->data, tree);
+		Tracing::RayTracing(pr->right, tree, ref - 1);
+	}
+	else if (pr->data.GetDist() < MAX_DIST && pr->data.IsIntersect() && -ref < MAX_REF)
+	{
+		Tracing::RefRay(pr, *pr->data.GetFace(), pr->data.GetDist(), false);
 		OBBIntersection::CollisionTest(&pr->right->data, tree);
 		Tracing::RayTracing(pr->right, tree, ref - 1);
 	}
@@ -113,11 +119,17 @@ void Tracing::RayTracing(BiNode<Ray>* pr, OBBTree * tree, int ref)
 
 void Tracing::RayTracingParallel(BiNode<Ray>* pr, OBBTree * tree, int ref, int * numThreads)
 {
-	if (pr->data.IsIntersect() && ref > 0)
+	if (pr->data.GetDist() < MAX_DIST && pr->data.IsIntersect() && ref > 0)
 	{
-		Tracing::RefRay(pr, *pr->data.GetFace());
+		Tracing::RefRay(pr, *pr->data.GetFace(), pr->data.GetDist());
 		OBBIntersection::CollisionTest(&pr->left->data, tree);
 		Tracing::RayTracing(pr->left, tree, ref - 1);
+		OBBIntersection::CollisionTest(&pr->right->data, tree);
+		Tracing::RayTracing(pr->right, tree, ref - 1);
+	}
+	else if (pr->data.GetDist() < MAX_DIST && pr->data.IsIntersect() && -ref < MAX_REF)
+	{
+		Tracing::RefRay(pr, *pr->data.GetFace(), pr->data.GetDist(), false);
 		OBBIntersection::CollisionTest(&pr->right->data, tree);
 		Tracing::RayTracing(pr->right, tree, ref - 1);
 	}
@@ -126,51 +138,55 @@ void Tracing::RayTracingParallel(BiNode<Ray>* pr, OBBTree * tree, int ref, int *
 	mu_thread.unlock();
 }
 
-void Tracing::RefRay(BiNode<Ray>* pr, faceInfo & f)
+void Tracing::RefRay(BiNode<Ray>* pr, faceInfo & f, float dist, bool divide)
 {
 	Vector4f d0, d1, n, start;
 	d0 = pr->data.GetDirect();
 	n = f.faceNorm;
 	start = pr->data.GetStartPt() + pr->data.GetDirect()*(pr->data.GetEnd() - 1e-5);
-	float elev = acos(1 - 2 * (float)rand() / RAND_MAX) / 2;
-	float azim = PI * 2 * (float)rand() / RAND_MAX;
-	Vector4f z = Vector4f(0.f, 0.f, 1.f);
-	float theta = acos(Vector4f::Dot3f(z, n));
-	Vector4f c = Vector4f::Cross3f(z, n);
-	if (c.GetLenght() < EPS)
-		c = Vector4f(0.f, 1.f, 0.f);
-	else
-		c.SetLenght(1.f);
-	Matrix4x4f w = Matrix4x4f();
-	w.r0 = Vector4f(0.f, -c[2], c[1]);
-	w.r1 = Vector4f(c[2], 0.f, -c[0]);
-	w.r2 = Vector4f(-c[1], c[0], 0.f);
-	Matrix4x4f eye = Matrix4x4f();
-	eye.LoadIdentity();
-	Matrix4x4f R = eye + w*sin(theta) + w * w * (1 - cos(theta));
-	d1 = R * Vector4f(sin(elev)*cos(azim), sin(elev)*sin(azim), cos(elev));
-	d1.SetLenght(1.0f);
-	pr->left = new BiNode<Ray>(Ray(start, d1));
+	if (divide)
+	{
+		float elev = acos(1 - 2 * (float)rand() / RAND_MAX) / 2;
+		float azim = PI * 2 * (float)rand() / RAND_MAX;
+		Vector4f z = Vector4f(0.f, 0.f, 1.f);
+		float theta = acos(Vector4f::Dot3f(z, n));
+		Vector4f c = Vector4f::Cross3f(z, n);
+		if (c.GetLenght() < EPS)
+			c = Vector4f(0.f, 1.f, 0.f);
+		else
+			c.SetLenght(1.f);
+		Matrix4x4f w = Matrix4x4f();
+		w.r0 = Vector4f(0.f, -c[2], c[1]);
+		w.r1 = Vector4f(c[2], 0.f, -c[0]);
+		w.r2 = Vector4f(-c[1], c[0], 0.f);
+		Matrix4x4f eye = Matrix4x4f();
+		eye.LoadIdentity();
+		Matrix4x4f R = eye + w*sin(theta) + w * w * (1 - cos(theta));
+		d1 = R * Vector4f(sin(elev)*cos(azim), sin(elev)*sin(azim), cos(elev));
+		d1.SetLenght(1.0f);
+		pr->left = new BiNode<Ray>(Ray(start, d1, dist + pr->data.GetEnd()));
+	}
 	float proj = Vector4f::Dot3f(d0, n);
 	d1 = d0 - n*proj * 2;
 	d1.SetLenght(1.0f);
-	pr->right = new BiNode<Ray>(Ray(start, d1));
+	pr->right = new BiNode<Ray>(Ray(start, d1, dist + pr->data.GetEnd()));
 }
 
-void Tracing::Traversal(BiNode<Ray>* ray, Orient & rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& scats, double length)
+void Tracing::Traversal(BiNode<Ray>* ray, Orient & rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& scats, int band)
 {
 	int mId = ray->data.GetFace()->m_id;
-	double len = length + ray->data.GetEnd();
 	refs[mId]++;
 	if (ray->left)
 	{
 		scats[mId]++;
-		Tracing::Traversal(ray->left, rec, sDrct, hrir, refs, scats, len);
+		Tracing::Traversal(ray->left, rec, sDrct, hrir, refs, scats);
 		scats[mId]--;
 	}
+	else
+		band = -3;
 	if (ray->right)
 	{
-		Tracing::Traversal(ray->left, rec, sDrct, hrir, refs, scats, len);
+		Tracing::Traversal(ray->left, rec, sDrct, hrir, refs, scats, band);
 	}
 	refs[mId]--;
 
@@ -185,14 +201,14 @@ void Tracing::Traversal(BiNode<Ray>* ray, Orient & rec, const vector<COMPLEX>& s
 	proj = -Vector4f::Dot3f(vec, r.GetDirect());
 	chordLen = Vector4f::Cross3f(vec, r.GetDirect()).GetLenght();
 	//HRIR::JudgeDirection(vec, front, up, hrir_s);
-	len = length + vec.GetLenght();
+	double len = ray->data.GetDist() + vec.GetLenght();
 	id = (int)round(len * FS / SOUND_SPEED);
 	if (id >= n)return;
 	if (chordLen / len <= angleLim && proj > 0 && proj <= r.GetEnd())
 	{
 		double delay = id - len * FS / SOUND_SPEED;
 		vector<double> phaseAdj = WallAirAbsorb::FreqMult(delay * 2 * pi / FS);
-		bRef = WallAirAbsorb::Absorb(len, refs, scats);
+		bRef = WallAirAbsorb::Absorb(len, refs, scats, band);
 		for (int i = 0; i < bRef.size(); i++)
 			cRef.push_back(COMPLEX(bRef[i] * sDrct[i].re * cos(phaseAdj[i]), bRef[i] * sDrct[i].im*sin(phaseAdj[i])));
 		hrir_s = WallAirAbsorb::InterpIFFT(cRef);
@@ -208,9 +224,9 @@ void Tracing::Traversal(BiNode<Ray>* ray, Orient & rec, const vector<COMPLEX>& s
 	}
 }
 
-void Tracing::TraversalParallel(int * numThreads, BiNode<Ray>* ray, Orient & rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& scats, double len)
+void Tracing::TraversalParallel(int * numThreads, BiNode<Ray>* ray, Orient & rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& scats, int band)
 {
-	Tracing::Traversal(ray, rec, sDrct, hrir, refs, scats, 0);
+	Tracing::Traversal(ray, rec, sDrct, hrir, refs, scats, band);
 	mu_thread.lock();
 	(*numThreads)--;
 	mu_thread.unlock();
@@ -630,10 +646,8 @@ void Tracing::TracingInRoom(vector<vector<FsmNode>>& vecFsms, OBBTree * tree, in
 void Tracing::ColliReceiver(vector<vector<FsmNode>>& fNodes, Vector4f rec, Vector4f front, Vector4f up, vector<vector<double>>& hrir, ofstream& fout)
 {
 	int id, n = hrir.size();
-	double len, Amp = 1.0, tlim = n / FS;
+	double len, tlim = n / FS;
 	Vector4f vec, farPl;
-	vector<vector<float>> hrir_s;
-	vector<double> href;
 	bool colli = true;
 	for (int i = 0; i < fNodes.size(); i++)
 	{
@@ -651,7 +665,7 @@ void Tracing::ColliReceiver(vector<vector<FsmNode>>& fNodes, Vector4f rec, Vecto
 			if (Vector4f::Dot3f(farPl, rec) + farPl.w <= 0)continue;
 			vec = fNodes[i][j].fsm.GetVertex() - rec;
 			len = vec.GetLenght();
-			double time = len / SOUND_SPEED, di = i;
+			/*double time = len / SOUND_SPEED, di = i;
 			if (time > tlim)continue;
 			fout.write((char*)&time, sizeof(double));
 			for (int iv = 0; iv < 3; iv++)
@@ -659,22 +673,30 @@ void Tracing::ColliReceiver(vector<vector<FsmNode>>& fNodes, Vector4f rec, Vecto
 				double v = vec[iv];
 				fout.write((char*)&v, sizeof(double));
 			}
-			fout.write((char*)&di, sizeof(double));
+			fout.write((char*)&di, sizeof(double));*/
 			//HRIR::JudgeDirection(vec, front, up, hrir_s);
-			//id = (int)round(len * FS / SOUND_SPEED);
-			//if (id >= n)continue;
-			//href = WallAirAbsorb::Absorb(len, i);
-			//hrir_s = WallAirAbsorb::ConvHrir(href, hrir_s);
-			//for (int ihs = 0; ihs < hrir_s.size(); ihs++)
-			//{
-			//	if (id + ihs >= n)break;
-			//	//hrir[id + ihs][0] += double(hrir_s[ihs][0])*Amp / len;
-			//	//rir[id + ihs][1] += double(hrir_s[ihs][1])*Amp / len;
-			//	hrir[id + ihs][0] += double(hrir_s[ihs][0]);
-			//	hrir[id + ihs][1] += double(hrir_s[ihs][1]);
-			//}
+			id = (int)round(len * FS / SOUND_SPEED);
+			if (id >= n)continue;
+			vector<double> bRef, hrir_s;
+			vector<COMPLEX> cRef;
+			bRef = WallAirAbsorb::Absorb(len, vector<int>(1,i), vector<int>(1,0), -3);
+			//cout << i << "\t" << bRef.size() << endl;
+			double delay = id - len * FS / SOUND_SPEED;
+			vector<double> phaseAdj = WallAirAbsorb::FreqMult(delay * 2 * pi / FS);
+			for (int i = 0; i < bRef.size(); i++)
+				cRef.push_back(COMPLEX(bRef[i] * cos(phaseAdj[i]), bRef[i] * sin(phaseAdj[i])));
+			hrir_s = WallAirAbsorb::InterpIFFT(cRef);
+			for (int ihs = 0; ihs < hrir_s.size(); ihs++)
+			{
+				int ind = id + ihs - hrir_s.size() / 2;
+				if (ind >= n)break;
+				if (ind < 0)continue;
+				//hrir[id + ihs][0] += double(hrir_s[ihs][0])*Amp / len;
+				//rir[id + ihs][1] += double(hrir_s[ihs][1])*Amp / len;
+				hrir[ind][0] += hrir_s[ihs];
+				//hrir[id + ihs][1] += double(hrir_s[ihs][1]);
+			}
 		}
-		//Amp *= 0.8;
 	}
 	fout.flush();
 }

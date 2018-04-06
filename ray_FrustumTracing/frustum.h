@@ -9,7 +9,7 @@ class Ray
 {
 public:
 	Ray();
-	Ray(Vector4f start, Vector4f drct, float amp = 1.f);
+	Ray(Vector4f start, Vector4f drct, float dist = 0.f);
 	~Ray();
 	Vector4f GetDirect() const { return direct; };
 	Vector4f GetStartPt() const { return startPoint; };
@@ -17,6 +17,7 @@ public:
 	void SetBegin(float bg) { begin = bg; }
 	float GetEnd() const { return end; };
 	void SetEnd(float ed) { end = ed; }
+	float GetDist() { return distTotal; }
 	faceInfo* GetFace() const { return intersectFace; }
 	void SetFace(faceInfo* f) { intersectFace = f; }
 	bool IsIntersect() const { return intersected; }
@@ -28,7 +29,7 @@ private:
 	Vector4f startPoint;//Start point of the ray
 	Vector4f direct;//Indicating the direction of the ray
 	float begin, end;//These two numbers represent the interval of the param of the line's param represent
-	float amp;// The energy this ray carries
+	float distTotal;// The dist this ray travels
 	faceInfo* intersectFace;
 	bool intersected;
 };

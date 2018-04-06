@@ -14,6 +14,8 @@ using namespace std;
 
 const float SOUND_SPEED = 343.37f;
 const float FS = 48e3f;
+const float MAX_DIST = 16384 * SOUND_SPEED / FS;
+const int MAX_REF = 100;
 
 class HRIR
 {

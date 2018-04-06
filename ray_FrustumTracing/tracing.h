@@ -24,9 +24,9 @@ namespace Tracing
 	void TracingInRoom(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref, Vector4f s, int nCircle = 150);
 	void RayTracing(BiNode<Ray> * pr, OBBTree * tree, int ref);
 	void RayTracingParallel(BiNode<Ray> * pr, OBBTree * tree, int ref, int* numThreads);
-	void RefRay(BiNode<Ray>* pr, faceInfo& f);
-	void Traversal(BiNode<Ray>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& scats, double len = 0);
-	void TraversalParallel(int *threadNum, BiNode<Ray>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& scats, double len = 0);
+	void RefRay(BiNode<Ray>* pr, faceInfo& f, float dist, bool divide = true);
+	void Traversal(BiNode<Ray>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& scats, int band = -2);
+	void TraversalParallel(int *threadNum, BiNode<Ray>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& scats, int band = -2);
 	void ColliReceiver(vector<BiNode<Ray>*>& rays, Orient& s, Orient& r, vector<vector<double>>& hrir, ofstream& fout);
 
 	void RayTracing(vector<Ray> &ray, OBBTree* tree, int ref);
@@ -98,14 +98,14 @@ void Tracing::ReadPathAndColli(string filename, string destdir, vector<vector<T>
 			up[0] >> up[1] >> up[2];
 		hrir = vector<vector<double>>(len, vector<double>(2));
 		if (_access(destdir.c_str(), 6) == -1)_mkdir(destdir.c_str());
-		ofstream foutbin(destdir + to_string(i) + ".binary", ios::binary);
+		ofstream foutbin(destdir + to_string(i) + ".dat", ios::binary);
 		ColliReceiver(fNodes, receiver, front, up, hrir, foutbin);
 		foutbin.close();
-		/*ofstream fout(destdir + to_string(i) + ".dat", ios::binary);
+		ofstream fout(destdir + to_string(i) + ".binary", ios::binary);
 		for (int k = 0; k < len; k++)
-			for (int l = 0; l < 2; l++)
+			for (int l = 0; l < 1; l++)
 				fout.write((char*)&hrir[k][l], sizeof(double));
-		fout.close();*/
+		fout.close();
 	}
 	fin.close();
 }
@@ -114,17 +114,20 @@ template <typename T>
 void Tracing::ReadSourceAndTracing(vector<vector<T>>& vecFsms, OBBTree * tree, int ref, string fileIndex)
 {
 	int numSources;
-	string pathFile;
-	Vector4f source;
+	string fname, directFile, pathFile;
+	Vector4f source, front, up;
 	srand((int)time(0));
 	fstream fin(fileIndex, ios::in);
 	fin >> numSources;
 	for (int i = 0; i < numSources; i++)
 	{
-		fin >> source[0] >> source[1] >> source[2] >> pathFile;
+		fin >> fname >> source[0] >> source[2] >> source[1]
+			>> front[0] >> front[2] >> front[1]
+			>> up[0] >> up[2] >> up[1]
+			>> directFile >> pathFile;
 		vecFsms.clear();
 		TracingInRoom(vecFsms, tree, ref, source);
-		ReadPathAndColli(pathFile, ".\\data\\brir\\Source_" + to_string(i) + "\\", vecFsms, 16384);
+		ReadPathAndColli(pathFile, ".\\data\\RIR\\Fsm_" + fname + "\\", vecFsms, 16384);
 	}
 	fin.close();
 }

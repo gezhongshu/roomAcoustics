@@ -12,7 +12,7 @@
 
 int main() 
 {
-	int ref = 10;
+	int ref = 5;
 	vector<int> vertId, matId;
 	WallAirAbsorb::LoadwithFileList(string("data\\matInd\\mat_scene09.txt"));
 	WallAirAbsorb::Init(ref);
@@ -32,6 +32,7 @@ int main()
 	cout << "\nOBB tree calculated." << endl;
 
 	vector<BiNode<Ray>*> rays;
+	vector<vector<FsmNode>> Fsms;
 
 	//cout << "Loading the HRIR database ..." << endl;
 	//HRIR::LoadHrir();
@@ -39,6 +40,7 @@ int main()
 
 	cout << "\nTracing rays ..." << endl;
 	Tracing::ReadSourceAndTracing(rays, tree, ref, ".\\data\\sources09.txt");
+	//Tracing::ReadSourceAndTracing(Fsms, tree, ref, ".\\data\\sources09.txt");
 	cout << "\nTraced off." << endl;
 
 	if (obj)		delete obj;
