@@ -236,9 +236,18 @@ void WallAirAbsorb::Init(int ref)
 				scatters.back()[i + 1][j] = scatters.back()[i][j] * scatter[id][j];
 				mirrors.back()[i + 1][j] = mirrors.back()[i][j] * (1 - scatter[id][j]);
 			}
-			brefs.back()[0][i + 1] = brefs.back()[0][i] * meanB; // 频带平均多次反射系数
-			scatters.back()[0][i + 1] = scatters.back()[0][i] * meanS; // 频带平均多次散射系数
-			mirrors.back()[0][i + 1] = mirrors.back()[0][i] * meanM; // 频带平均多次镜面反射系数
+			if (i < brefs.back()[0].size() - 1)
+			{
+				brefs.back()[0][i + 1] = brefs.back()[0][i] * meanB; // 频带平均多次反射系数
+				scatters.back()[0][i + 1] = scatters.back()[0][i] * meanS; // 频带平均多次散射系数
+				mirrors.back()[0][i + 1] = mirrors.back()[0][i] * meanM; // 频带平均多次镜面反射系数
+			}
+			else
+			{
+				brefs.back()[0].push_back(brefs.back()[0][i] * meanB); // 频带平均多次反射系数
+				scatters.back()[0].push_back(scatters.back()[0][i] * meanS); // 频带平均多次散射系数
+				mirrors.back()[0].push_back(mirrors.back()[0][i] * meanM); // 频带平均多次镜面反射系数
+			}
 		}
 		id++;
 	}
@@ -340,6 +349,11 @@ vector<double> WallAirAbsorb::InterpIFFT(vector<COMPLEX> fqValues, vector<double
 	for (int i = 0; i <= NRef; i++)
 		window.push_back(0.5*(1 - cos(2 * pi * i / NRef)));
 
+	if (fqValues.size() != fqN.size())
+	{
+		cout << "assert failed." << endl;
+		return vector<double>(fqValues.size());
+	}
 	assert(fqValues.size() == fqN.size());
 	int r = 0, nn = 0;
 	double ndx = nn*deltaX;

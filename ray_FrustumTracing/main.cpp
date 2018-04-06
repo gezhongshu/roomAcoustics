@@ -12,10 +12,10 @@
 
 int main() 
 {
-	int ref = 5;
+	int ref = 3;
 	vector<int> vertId, matId;
 	WallAirAbsorb::LoadwithFileList(string("data\\matInd\\mat_scene09.txt"));
-	WallAirAbsorb::Init(ref);
+	WallAirAbsorb::Init(ref+MAX_REF);
 	//Direct::LoadCSV("data\\Genelec8020.csv");
 	Mesh* obj = new Mesh("elecOrgan", "data\\model\\scene09.obj", vertId, matId, true);
 

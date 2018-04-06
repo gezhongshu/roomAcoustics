@@ -52,7 +52,7 @@ void Tracing::ReadSourceAndTracing(vector<BiNode<Ray>*>& rays, OBBTree * tree, i
 		bool complete = false;
 		thread task(Direct::paraLoad, directFile, &complete);
 		task.detach();
-		TracingInRoom(rays, tree, ref, source);
+		TracingInRoom(rays, tree, ref, source, 50);
 		//Direct::LoadCSV(directFile);
 		while (!complete) Sleep(1);
 		ReadPathAndColli(pathFile, ".\\data\\RIR\\Ray_" + fname + "\\", rays, Orient(source, front, up), 16384);
@@ -174,6 +174,11 @@ void Tracing::RefRay(BiNode<Ray>* pr, faceInfo & f, float dist, bool divide)
 
 void Tracing::Traversal(BiNode<Ray>* ray, Orient & rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& scats, int band)
 {
+	if (!ray)
+	{
+		cout << "error!" << endl;
+		return;
+	}
 	int mId = ray->data.GetFace()->m_id;
 	refs[mId]++;
 	if (ray->left)
@@ -186,9 +191,13 @@ void Tracing::Traversal(BiNode<Ray>* ray, Orient & rec, const vector<COMPLEX>& s
 		band = -3;
 	if (ray->right)
 	{
-		Tracing::Traversal(ray->left, rec, sDrct, hrir, refs, scats, band);
+		Tracing::Traversal(ray->right, rec, sDrct, hrir, refs, scats, band);
 	}
 	refs[mId]--;
+	int nref = 0;
+	for (auto r : refs)
+		nref += r;
+	nref = 1 - 2 * (nref % 2);
 
 	int id, n = hrir.size();
 	double chordLen, proj, angleLim = 0.01;//0.05 means a diameter of 5 cm at 1 meter distance
@@ -218,7 +227,7 @@ void Tracing::Traversal(BiNode<Ray>* ray, Orient & rec, const vector<COMPLEX>& s
 			if (ind >= n)break;
 			if (ind < 0)continue;
 			mu_hrir.lock();
-			hrir[ind][0] += hrir_s[ihs];
+			hrir[ind][0] += nref*hrir_s[ihs];
 			mu_hrir.unlock();
 		}
 	}
@@ -245,7 +254,7 @@ void Tracing::ColliReceiver(vector<BiNode<Ray>*>& rays, Orient& s, Orient& r, ve
 		vector<int> refs(WallAirAbsorb::GetMatNum(), 0), scats(WallAirAbsorb::GetMatNum(), 0);
 		Vector4f drct = ray->data.GetDirect();
 		sDrct = Direct::EvalAmp(s.LocalPolar(drct));
-		Tracing::Traversal(ray, r, sDrct, hrir, refs, scats, 0);
+		Tracing::Traversal(ray, r, sDrct, hrir, refs, scats);
 		//while (totalTask > maxThread) Sleep(1);
 		//mu_thread.lock();
 		//totalTask++;
