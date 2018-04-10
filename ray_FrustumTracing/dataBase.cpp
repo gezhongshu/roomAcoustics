@@ -150,7 +150,7 @@ WallAirAbsorb::~WallAirAbsorb()
 {
 }
 
-vector<double> WallAirAbsorb::Absorb(double dist, vector<int>& refs, vector<int>& scats, int band)
+vector<double> WallAirAbsorb::Absorb(double dist, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band)
 {
 	// band < -1: 全频带, band == -1: 频带平均, band > -1: 单频带
 	vector<double> bRef;
@@ -166,41 +166,38 @@ vector<double> WallAirAbsorb::Absorb(double dist, vector<int>& refs, vector<int>
 	if (dist > 1 && band < -1)
 	{
 		for (int mtl = 0; mtl < refs.size(); mtl++)
-			if (refs[mtl]>0)
+			if (refs[mtl] - mirs[mtl] - scats[mtl]>0)
 				for (int i = 0; i < bRef.size(); i++)
-					bRef[i] *= brefs[mtl][refs[mtl]][i];
-		if (band == -2)
-		{
-			for (int mtl = 0; mtl < scats.size(); mtl++)
-				if (scats[mtl] > 0)
-					for (int i = 0; i < bRef.size(); i++)
-						bRef[i] *= scatters[mtl][scats[mtl]][i];
-			for (int mtl = 0; mtl < scats.size(); mtl++)
-				if (refs[mtl] - scats[mtl] > 0)
-					for (int i = 0; i < bRef.size(); i++)
-						bRef[i] *= mirrors[mtl][refs[mtl] - scats[mtl]][i];
-		}
+					bRef[i] *= brefs[mtl][refs[mtl] - mirs[mtl] - scats[mtl]][i];
+		for (int mtl = 0; mtl < scats.size(); mtl++)
+			if (scats[mtl] > 0)
+				for (int i = 0; i < bRef.size(); i++)
+					bRef[i] *= scatters[mtl][scats[mtl]][i];
+		for (int mtl = 0; mtl < scats.size(); mtl++)
+			if (mirs[mtl] > 0)
+				for (int i = 0; i < bRef.size(); i++)
+					bRef[i] *= mirrors[mtl][mirs[mtl]][i];
 		for (int i = 0; i < bRef.size(); i++)
 			bRef[i] *= pow(attenAir[i], dist) / dist;
 	}
 	else if (dist > 1 && band >= 0)
 	{
-		for (int mtl = 0; mtl < refs.size(); mtl++)
-			if (refs[mtl]>0)
-				bRef[0] *= brefs[mtl][refs[mtl]][band];
+		for (int mtl = 0; mtl < mirs.size(); mtl++)
+			if (mirs[mtl]>0)
+				bRef[0] *= brefs[mtl][mirs[mtl]][band];
 		for (int mtl = 0; mtl < scats.size(); mtl++)
 			if (scats[mtl]>0)
 				bRef[0] *= scatters[mtl][scats[mtl]][band];
 		for (int mtl = 0; mtl < scats.size(); mtl++)
-			if (refs[mtl] - scats[mtl]>0)
-				bRef[0] *= mirrors[mtl][refs[mtl] - scats[mtl]][band];
+			if (mirs[mtl] - scats[mtl]>0)
+				bRef[0] *= mirrors[mtl][mirs[mtl] - scats[mtl]][band];
 		bRef[0] *= pow(attenAir[band], dist) / dist;
 	}
 	else if(dist>1)
 	{
-		for (int mtl = 0; mtl < refs.size(); mtl++)
-			bRef[0] *= brefs[mtl][0][refs[mtl]] * scatters[mtl][0][scats[mtl]]
-				* mirrors[mtl][0][refs[mtl] - scats[mtl]];
+		for (int mtl = 0; mtl < mirs.size(); mtl++)
+			bRef[0] *= brefs[mtl][0][mirs[mtl]] * scatters[mtl][0][scats[mtl]]
+				* mirrors[mtl][0][mirs[mtl] - scats[mtl]];
 		bRef[0] *= meanAir / dist;
 	}
 	return bRef;
@@ -332,8 +329,8 @@ vector<double> WallAirAbsorb::FreqMult(double coef)
 
 vector<double> WallAirAbsorb::InterpIFFT(vector<COMPLEX> fqValues, vector<double> fqs)
 {
-	const int NRef = 2048;
-	double nqst = FS / 2, halfI, halfIS, deltaX;
+	const int NRef = 512;
+	double nqst = FS / 2, halfI, halfIS, deltaX, fqLim = 100;
 	vector<double> href, fqN, window;
 	fqN.push_back(0);
 	fqValues.insert(fqValues.begin(), COMPLEX(0, 0));
@@ -363,7 +360,10 @@ vector<double> WallAirAbsorb::InterpIFFT(vector<COMPLEX> fqValues, vector<double
 	{
 		while (ndx<fqN[r + 1])
 		{
-			yy.push_back(fqValues[r] + 1 / (fqN[r + 1] - fqN[r]) * (ndx - fqN[r])*(fqValues[r + 1] - fqValues[r]));
+			if (ndx > fqLim)
+				yy.push_back(fqValues[r] + 1 / (fqN[r + 1] - fqN[r]) * (ndx - fqN[r])*(fqValues[r + 1] - fqValues[r]));
+			else
+				yy.push_back(COMPLEX(0, 0));
 			nn++;
 			ndx = nn*deltaX;
 		}
@@ -378,15 +378,15 @@ vector<double> WallAirAbsorb::InterpIFFT(vector<COMPLEX> fqValues, vector<double
 	assert(NRef == yy.size());
 	for (int i = 0; i < NRef; i++)
 	{
-		Fref[i] = yy[i];
+		Fref[i] = 1 / double(NRef) * yy[i];
 	}
-	IFFT(Fref, Tref, 11);
+	IFFT(Fref, Tref, 9);
 	for (int i = halfI; i < NRef; i++)
 		href.push_back(Tref[i].re);
 	for (int i = 0; i <= halfI; i++)
 		href.push_back(Tref[i].re);
-	for (int i = 0; i < href.size(); i++)
-		href[i] *= window[i];
+	/*for (int i = 0; i < href.size(); i++)
+		href[i] *= window[i];*/
 	free(Tref);
 	free(Fref);
 	return href;
@@ -477,7 +477,8 @@ vector<int> Orient::LocalPolar(Vector4f drct)
 {
 	drct.SetLenght(1.0);
 	float z = Vector4f::Dot3f(drct, up), x = Vector4f::Dot3f(drct, front), y = Vector4f::Dot3f(drct, right);
-	float el = asin(z) * 180 / PI, az = atan2(y, x) * 180 / PI;
-	az += int(az < 0) * 360;
-	return vector<int>({ int(az) ,90 - int(el) });
+	int el = asin(z) * 180 / PI, az = atan2(y, x) * 180 / PI;
+	az += int(az < 0) * 360 - int(az >= 360) * 360;
+	az = (el == 90 || el == -90) ? 0 : az;
+	return vector<int>({ az ,90 - el });
 }

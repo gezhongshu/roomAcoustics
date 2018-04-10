@@ -73,12 +73,31 @@ struct FsmNode
 	//vector<Vector4f> points;
 	vector<faceInfo*> faces;
 	bool colli;
+	Vector4f direct;
+	float distTotal;// The dist this ray travels
 
-	FsmNode() :colli(false) {};
-	FsmNode(Frustum frustum)
+	FsmNode() :colli(false), direct(Vector4f(1,0,0)), distTotal(0) {};
+	FsmNode(Frustum frustum, Vector4f drct = Vector4f(1, 0, 0), float dist = 0)
 	{
 		fsm = frustum;
 		colli = false;
+		direct = drct;
+		distTotal = dist;
+	}
+	Vector4f GetDirect() { return direct; };
+	bool IsIntersect() { return colli; }
+	float GetDist() { return distTotal; }
+	faceInfo* GetFace()
+	{
+		float area = 0;
+		faceInfo* face = 0;
+		for (auto f:faces)
+			if (f->area > area)
+			{
+				area = f->area;
+				face = f;
+			}
+		return face;
 	}
 };
 

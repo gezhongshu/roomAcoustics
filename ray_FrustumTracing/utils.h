@@ -8,6 +8,8 @@
 
 using namespace std;
 
+
+
 char isNumber(char c);
 string getHeadNum(string text);
 vector<float> getNumbers(string text);

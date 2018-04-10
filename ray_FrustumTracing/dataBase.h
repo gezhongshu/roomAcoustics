@@ -14,7 +14,7 @@ using namespace std;
 
 const float SOUND_SPEED = 343.37f;
 const float FS = 48e3f;
-const float MAX_DIST = 3384 * SOUND_SPEED / FS;
+const float MAX_DIST = 16384 * SOUND_SPEED / FS;
 const int MAX_REF = 100;
 
 class HRIR
@@ -37,7 +37,7 @@ public:
 	~WallAirAbsorb();
 	inline static vector<string> GetMatName() { return matName; };
 	inline static int GetMatNum() { return matName.size(); };
-	static vector<double> Absorb(double dist, vector<int>& refs, vector<int>& scats, int band = -2);
+	static vector<double> Absorb(double dist, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band = -2);
 	static void Init(int ref);
 	static void LoadwithFileList(string fileName);
 	static void LoadMat(vector<string> fileNames);

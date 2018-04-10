@@ -52,6 +52,7 @@ public:
 	Vector4f&	GetSides		()	{return OBBsides;}
 	Vector4f*	GetPoints		()	{return points;}
 	int			GetVertexCount	()	{return vertCount;}
+	double		GetVolume		()	{ return OBBsides.x*OBBsides.y*OBBsides.z; }
 	vector<faceInfo*> GetFaces() { return faceLink; }
 	bool IsEnd() { return isEnd; }
 	void AddFace(faceInfo* face) { faceLink.push_back(face); }
