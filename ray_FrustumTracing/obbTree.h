@@ -93,6 +93,7 @@ namespace OBBIntersection
 	bool TestSeparatingAxis(vector<Ray>& rays, int i, OBB* obb, Vector4f& L);
 
 	bool CollisionTest(Frustum* fsm, OBB* obb);
+	bool CollisionTest(FsmNode* fsm, OBB* obb);
 	bool TestSeparatingAxis(Frustum* fsm, OBB* obb, Vector4f& L, int i);
 
 	bool IntersectTriangle(Vector4f& orig, Vector4f& dir,

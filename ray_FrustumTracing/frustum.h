@@ -77,7 +77,7 @@ struct FsmNode
 	float distTotal;// The dist this ray travels
 
 	FsmNode() :colli(false), direct(Vector4f(1,0,0)), distTotal(0) {};
-	FsmNode(Frustum frustum, Vector4f drct = Vector4f(1, 0, 0), float dist = 0)
+	FsmNode(Frustum frustum, float dist = 0, Vector4f drct = Vector4f(1, 0, 0))
 	{
 		fsm = frustum;
 		colli = false;
@@ -87,6 +87,14 @@ struct FsmNode
 	Vector4f GetDirect() { return direct; };
 	bool IsIntersect() { return colli; }
 	float GetDist() { return distTotal; }
+	float TravelDist()
+	{
+		vector<Vector4f> verts = GetRayCollides();
+		Vector4f c(0);
+		for (auto v : verts)
+			c += v;
+		return (c - fsm.GetVertex()).GetLenght();
+	}
 	faceInfo* GetFace()
 	{
 		float area = 0;
@@ -99,16 +107,25 @@ struct FsmNode
 			}
 		return face;
 	}
+	vector<Vector4f> GetRayCollides()
+	{
+		vector<Vector4f> collis;
+		for (auto r : fsm.GetCorner())
+			if (r.IsIntersect())
+				collis.push_back(r.GetStartPt() + r.GetDirect()*(r.GetEnd()-EPS));
+		return collis;
+	}
 };
 
 
 template <class T> struct BiNode
 {
 	T data;//数据域
+	bool isScat;//决定是否考虑散射
 	BiNode<T> *left, *right;//指向左右子结点的指针
 
 	BiNode(const T &data, BiNode<T> *left = 0, BiNode<T> *right = 0) :
-		data(data), left(left), right(right) {};
+		data(data), isScat(false), left(left), right(right) {};
 	void relase()
 	{
 		if (left != NULL)left->relase();

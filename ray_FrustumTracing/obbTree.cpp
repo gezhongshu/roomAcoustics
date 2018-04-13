@@ -448,6 +448,11 @@ bool OBBIntersection::CollisionTest(Frustum * fsm, OBB * obb)
 	return true;
 }
 
+bool OBBIntersection::CollisionTest(FsmNode * fsm, OBB * obb)
+{
+	return CollisionTest(&fsm->fsm, obb);
+}
+
 bool OBBIntersection::TestSeparatingAxis(Frustum * fsm, OBB * obb, Vector4f & L, int i)
 {
 	if (L.GetLenght() <= 1e-10)return false;

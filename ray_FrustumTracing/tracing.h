@@ -20,7 +20,7 @@
 
 namespace Tracing
 {
-	const int NC = 150;
+	const int NC = 15;
 	static mutex mu_thread, mu_hrir;
 	static int maxThread = thread::hardware_concurrency();
 	extern double angleLim;
@@ -43,10 +43,12 @@ namespace Tracing
 
 	void TracingInRoom(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref, Vector4f s, int nCircle = NC);
 	void RefRay(BiNode<Ray>* pr, bool divide = true);
+	void ColliRay(Ray* ray, OBBTree* tree);
 	void PassReceiver(BiNode<Ray>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band);
 	
 	void TracingInRoom(vector<BiNode<FsmNode>*>& rays, OBBTree * tree, int ref, Vector4f s);
 	void RefRay(BiNode<FsmNode>* pr, bool divide = true);
+	void ColliRay(FsmNode* ray, OBBTree* tree);
 	void PassReceiver(BiNode<FsmNode>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band);
 
 
@@ -222,15 +224,15 @@ void Tracing::RayTracing(BiNode<T>* pr, OBBTree * tree, int ref)
 	if (pr->data.GetDist() < MAX_DIST && pr->data.IsIntersect() && ref > 0)
 	{
 		Tracing::RefRay(pr);
-		OBBIntersection::CollisionTest(&pr->left->data, tree);
+		Tracing::ColliRay(&pr->left->data, tree);
 		Tracing::RayTracing(pr->left, tree, ref - 1);
-		OBBIntersection::CollisionTest(&pr->right->data, tree);
+		Tracing::ColliRay(&pr->right->data, tree);
 		Tracing::RayTracing(pr->right, tree, ref - 1);
 	}
 	else if (pr->data.GetDist() < MAX_DIST && pr->data.IsIntersect() && -ref < MAX_REF)
 	{
 		Tracing::RefRay(pr, false);
-		OBBIntersection::CollisionTest(&pr->right->data, tree);
+		Tracing::ColliRay(&pr->right->data, tree);
 		Tracing::RayTracing(pr->right, tree, ref - 1);
 	}
 }
@@ -238,7 +240,7 @@ void Tracing::RayTracing(BiNode<T>* pr, OBBTree * tree, int ref)
 template <typename T>
 void Tracing::RayTracingParallel(BiNode<T>* pr, OBBTree * tree, int ref, int * numThreads)
 {
-	RayTracing(pr, tree, ref);
+	Tracing::RayTracing(pr, tree, ref);
 	mu_thread.lock();
 	(*numThreads)--;
 	mu_thread.unlock();
@@ -260,17 +262,17 @@ void Tracing::Traversal(BiNode<T>* ray, Orient & rec, const vector<COMPLEX>& sDr
 		refs[mId]++;
 		if (ray->left)
 		{
-			scats[mId]++;
+			if (ray->isScat)scats[mId]++;
 			Tracing::Traversal(ray->left, rec, sDrct, hrir, refs, mirs, scats);
-			scats[mId]--;
+			if (ray->isScat)scats[mId]--;
 		}
 		else
 			band--;
 		if (ray->right)
 		{
-			if (band > -3)mirs[mId]++;
+			if (ray->isScat)mirs[mId]++;
 			Tracing::Traversal(ray->right, rec, sDrct, hrir, refs, mirs, scats, band);
-			if (band > -3)mirs[mId]--;
+			if (ray->isScat)mirs[mId]--;
 		}
 		refs[mId]--;
 	}
@@ -300,6 +302,12 @@ void Tracing::ColliReceiver(vector<BiNode<T>*>& rays, Orient& s, Orient& r, vect
 	{
 		numRay++;
 		Vector4f drct = ray->data.GetDirect();
+		/*Vector4f StoR = r.GetPos() - s.GetPos();
+		StoR.SetLenght(1.0);
+		if (Vector4f::Dot3f(drct, StoR) > 0.997)
+		{
+ 			cout << drct.x << drct.y << drct.z << endl;
+		}*/
 		sDrct = Direct::EvalAmp(s.LocalPolar(drct));
 		Tracing::Traversal(ray, r, sDrct, hrir, refs, mirs, scats);
 		/*while (totalTask > maxThread) Sleep(0);
