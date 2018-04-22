@@ -117,6 +117,33 @@ struct FsmNode
 	}
 };
 
+struct RayNode
+{
+	Frustum fsm;
+	Ray ray;
+
+	RayNode(Frustum frustum, Ray ray) :fsm(frustum), ray(ray) {};
+	RayNode(Frustum frustum, Vector4f start, Vector4f drct, float dist = 0)
+	{
+		fsm = frustum;
+		ray = Ray(start, drct, dist);
+	}
+	Vector4f GetDirect() { return ray.GetDirect(); }
+	bool IsIntersect() { return ray.IsIntersect(); }
+	float GetDist() { return ray.GetDist(); }
+	faceInfo* GetFace()	{ return ray.GetFace();	}
+	void CutFsm()
+	{
+		if (!ray.IsIntersect())return;
+		Vector4f d, vref;
+		vector<Vector4f> verts;
+		d = Vector4f(0) - ray.GetDirect();
+		vref = ray.GetStartPt() - d * ray.GetEnd();
+		d.w = -Vector4f::Dot3f(d, vref);
+		fsm.cutWithPlane(d);
+	}
+};
+
 
 template <class T> struct BiNode
 {

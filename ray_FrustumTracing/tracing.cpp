@@ -1,6 +1,6 @@
 #include "tracing.h"
 
-double Tracing::angleLim = 0.01;
+double Tracing::angleLim = 0.03;
 
 void Tracing::TracingInRoom(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref, Vector4f s, int nCircle)
 {
@@ -139,7 +139,7 @@ void Tracing::TracingInRoom(vector<BiNode<FsmNode>*>& rays, OBBTree * tree, int 
 {
 	Vector4f source = s;
 	int numRay = 0;
-	float delta = 2;
+	float delta = 1;
 
 	for (float elev = -90 + 2 * delta; 90 - elev - delta> EPS; elev += 2 * delta)
 	{
@@ -241,7 +241,7 @@ void Tracing::PassReceiver(BiNode<FsmNode>* ray, Orient& rec, const vector<COMPL
 	vector<COMPLEX> cRef;
 	bool colli = true;
 	for (auto norm : ray->data.fsm.GetNorm())
-		if (Vector4f::Dot3f(norm, rec.GetPos()) + norm.w <= -EPS)
+		if (Vector4f::Dot3f(norm, rec.GetPos()) + norm.w < 0)
 		{
 			colli = false;
 			break;
@@ -283,6 +283,166 @@ void Tracing::PassReceiver(BiNode<FsmNode>* ray, Orient& rec, const vector<COMPL
 	}
 }
 
+
+void Tracing::TracingInRoom(vector<BiNode<RayNode>*>& rays, OBBTree * tree, int ref, Vector4f s)
+{
+	int numRay = 0;
+	float delta = 2;
+
+	for (float elev = -90 + 2 * delta; 90 - elev - delta> EPS; elev += 2 * delta)
+	{
+		float theta[] = { elev - delta, elev + delta };
+		int totalTask = 0;
+		vector<thread> tasks;
+		for (float azim = 0; 360 - azim - delta > EPS; azim += 2 * delta)
+		{
+			numRay++;
+			float phi[] = { azim - delta, azim + delta };
+			Vector4f drct = Vector4f(sin(elev*pi / 180)*cos(azim*pi / 180), sin(elev*pi / 180)*sin(azim*pi / 180), cos(elev*pi / 180));
+			vector<Vector4f> verts;
+			for (int i = 0; i < 2; i++)
+				for (int j = 0; j < 2; j++)
+					verts.push_back(Vector4f(s.x + sin(theta[i] * pi / 180)*cos(phi[j^i] * pi / 180) * 0.1,
+						s.y + sin(theta[i] * pi / 180)*sin(phi[j^i] * pi / 180) * 0.1, s.z + cos(theta[i] * pi / 180) * 0.1));
+			Frustum fsm = Frustum(s, verts);
+			Ray ray = Ray(s, drct);
+			OBBIntersection::CollisionTest(&ray, tree);
+			rays.push_back(new BiNode<RayNode>(RayNode(fsm, ray)));
+			rays.back()->data.CutFsm();
+			rays.back()->isScat = false;
+			while (totalTask > maxThread) Sleep(0);
+			mu_thread.lock();
+			totalTask++;
+			string s;
+			s = "Running: " + to_string(int(90 + elev)) + " / " + to_string(int(180 - delta))
+				+ ", number of threads: " + to_string(totalTask);
+			for (int i = 0; i < s.size(); i++)
+				printf("\b");
+			//cout << s << flush;
+			printf("%s", s.c_str());
+			mu_thread.unlock();
+			tasks.push_back(thread(RayTracingParallel<RayNode>, rays.back(), tree, ref, &totalTask));
+			tasks.back().detach();
+			//RayTracing(rays.back(), tree, ref);
+		}
+		while (totalTask > 0) Sleep(1);
+	}
+	cout << "\nReal number of rays: " << numRay << endl;
+}
+
+void Tracing::RefRay(BiNode<RayNode>* pr, bool divide)
+{
+	if (!pr->data.ray.IsIntersect())return;
+	Vector4f d0, d1, dr, n, vertex, start;
+	vector<Vector4f> verts;
+	float dist, dnorm;
+	dist = pr->data.GetDist();
+	d0 = pr->data.GetDirect();
+	n = pr->data.GetFace()->faceNorm;
+	vertex = pr->data.fsm.GetVertex();
+	start = pr->data.ray.GetStartPt() + pr->data.GetDirect()*(pr->data.ray.GetEnd() - EPS);
+
+	float proj = Vector4f::Dot3f(d0, n);
+	d1 = d0 - n*proj * 2;
+	d1.SetLenght(1.0f);
+	vertex = vertex - n * 2 * (Vector4f::Dot3f(vertex, n) + n.w);
+	dnorm = (start - vertex).GetLenght();
+
+	for (auto r : pr->data.fsm.GetCorner())
+	{
+		dr = r.GetDirect();
+		dr = dr - n * Vector4f::Dot3f(dr, n) * 2;
+		verts.push_back(vertex + dr * dnorm / Vector4f::Dot3f(d1, dr));
+	}
+	pr->right = new BiNode<RayNode>(RayNode(Frustum(vertex, verts), start, d1, dist + pr->data.ray.GetEnd()));
+	pr->right->isScat = false;
+
+	/*if (divide)
+	{
+	float elev = acos(1 - 2 * (float)rand() / RAND_MAX) / 2;
+	float azim = PI * 2 * (float)rand() / RAND_MAX;
+	Vector4f z = Vector4f(0.f, 0.f, 1.f);
+	float theta = acos(Vector4f::Dot3f(z, n));
+	Vector4f c = Vector4f::Cross3f(z, n);
+	if (c.GetLenght() < EPS)
+	c = Vector4f(0.f, 1.f, 0.f);
+	else
+	c.SetLenght(1.f);
+	Matrix4x4f w = Matrix4x4f();
+	w.r0 = Vector4f(0.f, -c[2], c[1]);
+	w.r1 = Vector4f(c[2], 0.f, -c[0]);
+	w.r2 = Vector4f(-c[1], c[0], 0.f);
+	Matrix4x4f eye = Matrix4x4f();
+	eye.LoadIdentity();
+	Matrix4x4f R = eye + w*sin(theta) + w * w * (1 - cos(theta));
+	d1 = R * Vector4f(sin(elev)*cos(azim), sin(elev)*sin(azim), cos(elev));
+	d1.SetLenght(1.0f);
+	pr->left = new BiNode<RayNode>(Ray(vertex, d1, dist + pr->data.GetEnd()));
+	}*/
+}
+
+void Tracing::ColliRay(RayNode * ray, OBBTree * tree)
+{
+	OBBIntersection::CollisionTest(&ray->ray, tree);
+	ray->CutFsm();
+}
+
+void Tracing::PassReceiver(BiNode<RayNode>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band)
+{
+	int nref = 0;
+	for (auto r : refs)
+		nref += r;
+	nref = 1 - 2 * (nref % 2);
+	//nref = 1;
+
+	int id, n = hrir.size();
+	double len;
+	Vector4f vec;
+	vector<double> bRef, hrir_s;
+	vector<COMPLEX> cRef;
+	bool colli = true;
+	for (auto norm : ray->data.fsm.GetNorm())
+		if (Vector4f::Dot3f(norm, rec.GetPos()) + norm.w < 0)
+		{
+			colli = false;
+			break;
+		}
+	if (!colli)return;
+	Vector4f farPl = ray->data.fsm.GetRefPlane();
+	if (Vector4f::Dot3f(farPl, rec.GetPos()) + farPl.w <= 0)return;
+	vec = ray->data.fsm.GetVertex() - rec.GetPos();
+	len = vec.GetLenght();
+	/*double time = len / SOUND_SPEED, di = i;
+	if (time > tlim)continue;
+	fout.write((char*)&time, sizeof(double));
+	for (int iv = 0; iv < 3; iv++)
+	{
+	double v = vec[iv];
+	fout.write((char*)&v, sizeof(double));
+	}
+	fout.write((char*)&di, sizeof(double));*/
+	//HRIR::JudgeDirection(vec, front, up, hrir_s);
+	id = (int)round(len * FS / SOUND_SPEED);
+	if (id >= n)return;
+
+	double delay = id - len * FS / SOUND_SPEED;
+	vector<double> phaseAdj = WallAirAbsorb::FreqMult(delay * 2 * pi / FS);
+	bRef = WallAirAbsorb::Absorb(len, refs, mirs, scats, band);
+	if (bRef.size() < 10)
+		cout << "bRef.size() = " << bRef.size() << endl;
+	for (int i = 0; i < bRef.size(); i++)
+		cRef.push_back(COMPLEX(bRef[i] * sDrct[i].re * cos(phaseAdj[i]), bRef[i] * sDrct[i].im*sin(phaseAdj[i])));
+	hrir_s = WallAirAbsorb::InterpIFFT(cRef);
+	for (int ihs = 0; ihs < hrir_s.size(); ihs++)
+	{
+		int ind = id + ihs - hrir_s.size() / 2;
+		if (ind >= n)break;
+		if (ind < 0)continue;
+		mu_hrir.lock();
+		hrir[ind][0] += nref*hrir_s[ihs];
+		mu_hrir.unlock();
+	}
+}
 
 
 void Tracing::RayTracing(vector<Ray>& ray, OBBTree* tree, int ref)

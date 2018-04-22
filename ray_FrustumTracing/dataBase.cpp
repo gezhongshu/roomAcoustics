@@ -128,6 +128,7 @@ WallAirAbsorb::WallAirAbsorb()
 void WallAirAbsorb::LoadwithFileList(string fileName)
 {
 	cout << "\nLoading materials ..." << endl;
+	matName = vector<string>(1, string("data\\matLib\\mat_scene09_concrete.csv"));
 	fstream fin(fileName, ios::in);
 	int matNum, last;
 	string line;
@@ -208,6 +209,9 @@ void WallAirAbsorb::Init(int ref)
 	for (auto f : fq)
 		attenAir.push_back(exp(-0.5 * 5.54e-4 * (50 / 50)*pow((f > 10000 ? 10000 : f) / 1000, 1.7)));
 	int id = 0;
+	brefs = vector<vector<vector<double>>>();
+	scatters = vector<vector<vector<double>>>();
+	mirrors = vector<vector<vector<double>>>();
 	for (auto alph : alpha)
 	{
 		vector<double> btmp;
@@ -417,9 +421,8 @@ void Direct::LoadCSV(string fileName)
 	if (type.size() > 0)
 		if (type == name)
 			return;
-		else
-			type = name;
-	cout << "\nLoading the source directional file ..." << endl;
+	type = name;
+	cout << "\nLoading the source directional file " << type << " ..." << endl;
 	fstream fin(fileName, ios::in);
 	COMPLEX temp;
 	string line;

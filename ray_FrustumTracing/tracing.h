@@ -20,7 +20,7 @@
 
 namespace Tracing
 {
-	const int NC = 15;
+	const int NC = 150;
 	static mutex mu_thread, mu_hrir;
 	static int maxThread = thread::hardware_concurrency();
 	extern double angleLim;
@@ -50,6 +50,11 @@ namespace Tracing
 	void RefRay(BiNode<FsmNode>* pr, bool divide = true);
 	void ColliRay(FsmNode* ray, OBBTree* tree);
 	void PassReceiver(BiNode<FsmNode>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band);
+
+	void TracingInRoom(vector<BiNode<RayNode>*>& rays, OBBTree * tree, int ref, Vector4f s);
+	void RefRay(BiNode<RayNode>* pr, bool divide = true);
+	void ColliRay(RayNode* ray, OBBTree* tree);
+	void PassReceiver(BiNode<RayNode>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band);
 
 
 	void RayTracing(vector<Ray> &ray, OBBTree* tree, int ref);
@@ -171,7 +176,11 @@ void Tracing::ReadPathAndColli(string filename, string destdir, vector<BiNode<T>
 			front[0] >> front[2] >> front[1] >>
 			up[0] >> up[2] >> up[1];
 		hrir = vector<vector<double>>(len, vector<double>(1));
-		if (_access(destdir.c_str(), 6) == -1)_mkdir(destdir.c_str());
+		cout << "\nCalculating receiver: " << i + 1 << " / " << n << endl;
+		int offset = 0;
+		while (offset != string::npos)
+			if (_access(destdir.substr(0, offset=destdir.find_first_of('\\', offset+1)).c_str(), 6) == -1)
+				_mkdir(destdir.substr(0, offset).c_str());
 		ofstream fout(destdir + to_string(i) + ".binary", ios::binary);
 		ColliReceiver(rays, s, Orient(receiver, front, up), hrir, fout);
 		/*fout.close();
@@ -194,8 +203,8 @@ void Tracing::ReadSourceAndTracing(vector<BiNode<T>*>& rays, OBBTree * tree, int
 	Vector4f source, front, up;
 	double roomVolume = tree->GetTree()->GetBox()->GetVolume();
 	Tracing::angleLim = log10(roomVolume) * pi / 2 / NC;
-	cout << "\nangleLim = " << Tracing::angleLim << ", room volume: " << roomVolume
-		<< "\nEvaluate number of rays: " << int(pow(4 / pi*NC, 2)) << endl;
+	/*cout << "\nangleLim = " << Tracing::angleLim << ", room volume: " << roomVolume
+		<< "\nEvaluate number of rays: " << int(pow(4 / pi*NC, 2)) << endl;*/
 	srand((int)time(0));
 	fstream fin(fileIndex, ios::in);
 	fin >> numSources;
@@ -213,7 +222,10 @@ void Tracing::ReadSourceAndTracing(vector<BiNode<T>*>& rays, OBBTree * tree, int
 		TracingInRoom(rays, tree, ref, source);
 		//Direct::LoadCSV(directFile);
 		while (!complete) Sleep(1);
-		ReadPathAndColli(pathFile, ".\\data\\RIR\\Ray_" + fname + "\\", rays, Orient(source, front, up), 16384);
+		string tname(typeid(T).name());
+		tname = tname.substr(tname.find_last_of(' ') + 1);
+		string sceneName = fileIndex.substr(fileIndex.find_last_of('.') - 2, 2);
+		ReadPathAndColli(pathFile, ".\\data\\RIR\\scene" + sceneName + "\\" + tname + "_" + fname + "\\", rays, Orient(source, front, up), 16384);
 	}
 	fin.close();
 }
@@ -309,10 +321,10 @@ void Tracing::ColliReceiver(vector<BiNode<T>*>& rays, Orient& s, Orient& r, vect
  			cout << drct.x << drct.y << drct.z << endl;
 		}*/
 		sDrct = Direct::EvalAmp(s.LocalPolar(drct));
-		Tracing::Traversal(ray, r, sDrct, hrir, refs, mirs, scats);
-		/*while (totalTask > maxThread) Sleep(0);
+		//Tracing::Traversal(ray, r, sDrct, hrir, refs, mirs, scats);
+		while (totalTask > maxThread) Sleep(0);
 		mu_thread.lock();
-		totalTask++;*/
+		totalTask++;
 		string s;
 		s = "Running: " + to_string(numRay) + " / " + to_string(rays.size())
 			+ ", number of threads: " + to_string(totalTask);
@@ -320,11 +332,11 @@ void Tracing::ColliReceiver(vector<BiNode<T>*>& rays, Orient& s, Orient& r, vect
 			printf("\b");
 		//cout << s << flush;
 		printf("%s", s.c_str());
-		/*mu_thread.unlock();
+		mu_thread.unlock();
 		tasks.push_back(thread(TraversalParallel<T>, &totalTask, ray, r, sDrct, std::ref(hrir), refs, mirs, scats, -2));
-		tasks.back().detach();*/
+		tasks.back().detach();
 	}
-	/*while (totalTask > 0) Sleep(1);*/
+	while (totalTask > 0) Sleep(1);
 	cout << endl;
 }
 
