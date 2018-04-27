@@ -13,7 +13,7 @@
 void TraceScenes(string file)
 {
 	fstream fin(file, ios::in);
-	int n; //Number of receivers
+	int n; //Number of scenes
 	string sceneFile, matFile, sourceFile;
 	fin >> n;
 	for (int i = 0; i < n; i++)
@@ -45,19 +45,20 @@ void TraceScenes(string file)
 		//cout << "Loading the HRIR database ..." << endl;
 		//HRIR::LoadHrir();
 		//cout << "HRIR loaded." << endl;
-		cout << "\nTracing rays ..." << flush;
-		int ref = 3;
-		WallAirAbsorb::Init(ref + MAX_REF);
-		Tracing::ReadSourceAndTracing(rays, tree, ref, sourceFile);
 
-		cout << "\nTracing fNodes ..." << flush;
+		//cout << "\nTracing rays ..." << flush;
+		int ref = 0;
+		WallAirAbsorb::Init(ref + MAX_REF);
+		//Tracing::ReadSourceAndTracing(rays, tree, ref, sourceFile);
+
+		/*cout << "\nTracing fNodes ..." << flush;
 		ref = 0;
 		WallAirAbsorb::Init(ref + MAX_REF);
-		Tracing::ReadSourceAndTracing(fNodes, tree, ref, sourceFile);
+		Tracing::ReadSourceAndTracing(fNodes, tree, ref, sourceFile);*/
 
 		cout << "\nTracing rNodes ..." << flush;
-		ref = 0;
-		WallAirAbsorb::Init(ref + MAX_REF);
+		/*ref = 0;
+		WallAirAbsorb::Init(ref + MAX_REF);*/
 		Tracing::ReadSourceAndTracing(rNodes, tree, ref, sourceFile);
 
 		if (obj)		delete obj;

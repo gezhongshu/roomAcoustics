@@ -10,15 +10,18 @@ class Ray
 public:
 	Ray();
 	Ray(Vector4f start, Vector4f drct, float dist = 0.f);
+	Ray(Vector4f start, Vector4f drct, Vector4f normRef, float dist = 0.f);
 	~Ray();
 	Vector4f GetDirect() const { return direct; };
 	Vector4f GetStartPt() const { return startPoint; };
+	Vector4f GetBeginPt() { return startPoint + direct*double(begin); }
 	float GetBegin() const { return begin; };
 	void SetBegin(float bg) { begin = bg; }
 	float GetEnd() const { return end; };
 	void SetEnd(float ed) { end = ed; }
 	float GetDist() { return distTotal; }
 	faceInfo* GetFace() const { return intersectFace; }
+	Vector4f GetRef() { return reflectNorm; }
 	void SetFace(faceInfo* f) { intersectFace = f; }
 	bool IsIntersect() const { return intersected; }
 	void SetIntersect() { intersected = true; }
@@ -27,10 +30,10 @@ public:
 
 private:
 	Vector4f startPoint;//Start point of the ray
-	Vector4f direct;//Indicating the direction of the ray
+	Vector4f direct,reflectNorm;//Indicating the direction of the ray
 	float begin, end;//These two numbers represent the interval of the param of the line's param represent
 	float distTotal;// The dist this ray travels
-	faceInfo* intersectFace;
+	faceInfo *intersectFace;
 	bool intersected;
 };
 
@@ -46,6 +49,7 @@ public:
 	inline Vector4f GetVertex() const { return vertex; };
 	inline vector<Vector4f> GetVerts() const { return verts; };
 	inline Vector4f& GetRefPlane() { return farPlane; };
+	inline float GetSolidAngle() { return solidAngle; };
 	inline void AddObb(OBB* obb) { obbs.push_back(obb); };
 	inline int GetObbNum() { return obbs.size(); };
 	inline vector<OBB*> GetObbs() { return obbs; };
@@ -127,6 +131,11 @@ struct RayNode
 	{
 		fsm = frustum;
 		ray = Ray(start, drct, dist);
+	}
+	RayNode(Frustum frustum, Vector4f start, Vector4f drct, Vector4f normRef, float dist = 0)
+	{
+		fsm = frustum;
+		ray = Ray(start, drct, normRef, dist);
 	}
 	Vector4f GetDirect() { return ray.GetDirect(); }
 	bool IsIntersect() { return ray.IsIntersect(); }

@@ -396,7 +396,7 @@ vector<double> WallAirAbsorb::InterpIFFT(vector<COMPLEX> fqValues, vector<double
 	return href;
 }
 
-vector<string> WallAirAbsorb::matName = vector<string>(1, string("data\\matLib\\mat_scene09_concrete.csv"));
+vector<string> WallAirAbsorb::matName = vector<string>(1, string("data\\matLib\\mat_default.csv"));
 vector<vector<double>> WallAirAbsorb::alpha = { { 0.36, 0.36, 0.45, 0.51, 0.64, 0.51 } };
 vector<double> WallAirAbsorb::attenAir = vector<double>();
 vector<double> WallAirAbsorb::fq = {125, 250, 500, 1000, 2000, 4000};
@@ -454,7 +454,7 @@ vector<COMPLEX> Direct::EvalAmp(int azim, int elev)
 
 vector<COMPLEX> Direct::EvalAmp(vector<int> polar)
 {
-	return directions[polar[0]][polar[1]];
+	return vector<COMPLEX>(31, COMPLEX(1, 0));// directions[polar[0]][polar[1]];
 }
 
 vector<vector<vector<COMPLEX>>> Direct::directions(vector<vector<vector<COMPLEX>>>(360, vector<vector<COMPLEX>>(181, vector<COMPLEX>())));

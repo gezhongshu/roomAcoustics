@@ -158,6 +158,7 @@ typedef struct COMPLEX
 
 	COMPLEX() :re(0), im(0) {};
 	COMPLEX(double re, double im) :re(re), im(im) {};
+	double Energy() { return re*re + im*im; };
 };
 
 //¸´Êı¼ÓÔËËã

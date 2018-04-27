@@ -1,9 +1,9 @@
-8
-LS01pX 0.0 4.5 1.79 1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
-LS01nX 0.0 4.5 1.79 -1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
-LS01pY 0.0 4.5 1.79 0.0 1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
-LS01nY 0.0 4.5 1.79 0.0 -1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
-LS02pX 2.8 -4.5 1.79 1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
-LS02nX 2.8 -4.5 1.79 -1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
-LS02pY 2.8 -4.5 1.79 0.0 1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
-LS02nY 2.8 -4.5 1.79 0.0 -1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
+1
+LS1pX 0.0 4.5 1.79 1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
+LS1nX 0.0 4.5 1.79 -1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
+LS1pY 0.0 4.5 1.79 0.0 1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
+LS1nY 0.0 4.5 1.79 0.0 -1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
+LS2pX 2.8 -4.5 1.79 1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
+LS2nX 2.8 -4.5 1.79 -1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
+LS2pY 2.8 -4.5 1.79 0.0 1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
+LS2nY 2.8 -4.5 1.79 0.0 -1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.csv .\data\source_path\paths11.txt
