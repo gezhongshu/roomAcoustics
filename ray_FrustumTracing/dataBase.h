@@ -13,7 +13,7 @@
 using namespace std;
 
 const float SOUND_SPEED = 343.37f;
-const float FS = 48e3f;
+const float FS = 44.1e3f;
 const int LEN_RIR = 32768;
 const float MAX_DIST = LEN_RIR * SOUND_SPEED / FS;
 const int MAX_REF = 100;
@@ -42,7 +42,7 @@ public:
 	static void Init(int ref);
 	static void LoadwithFileList(string fileName);
 	static void LoadMat(vector<string> fileNames);
-	static vector<vector<float>> ConvHrir(vector<double> filter, vector<vector<float>> hrir);
+	static vector<vector<double>> ConvHrir(vector<double> filter, vector<vector<double>> hrir);
 	static vector<double> FreqMult(double coef);
 	static vector<double> InterpIFFT(vector<COMPLEX> fqValues, vector<double> fqs = fq);
 
@@ -58,14 +58,15 @@ class Direct
 public:
 	Direct();
 	~Direct();
-	static void LoadCSV(string fileName);
+	//static void LoadCSV(string fileName);
+	static void LoadMAT(string fileName);
 	static void paraLoad(string fineName, bool * complete);
-	static vector<COMPLEX> EvalAmp(int azim, int elev);
-	static vector<COMPLEX> EvalAmp(vector<int> polar);
+	static vector<double> EvalAmp(int azim, int elev);
+	static vector<double> EvalAmp(vector<int> polar);
 
 private:
 	static string type;
-	static vector<vector<vector<COMPLEX>>> directions;
+	static vector<vector<vector<double>>> directions;
 };
 
 class Orient

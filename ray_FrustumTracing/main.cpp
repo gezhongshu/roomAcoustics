@@ -20,6 +20,7 @@ void TraceScenes(string file)
 	{
 		cout << "\n\nTracing scene: " << i + 1 << " / " << n << endl;
 		fin >> sceneFile >> matFile >> sourceFile;
+		//if (i > 0)continue;
 		vector<int> vertId, matId;
 		WallAirAbsorb::LoadwithFileList(matFile);
 
@@ -46,7 +47,7 @@ void TraceScenes(string file)
 		//HRIR::LoadHrir();
 		//cout << "HRIR loaded." << endl;
 
-		//cout << "\nTracing rays ..." << flush;
+		cout << "\nTracing rays ..." << flush;
 		int ref = 0;
 		WallAirAbsorb::Init(ref + MAX_REF);
 		//Tracing::ReadSourceAndTracing(rays, tree, ref, sourceFile);
@@ -56,7 +57,7 @@ void TraceScenes(string file)
 		WallAirAbsorb::Init(ref + MAX_REF);
 		Tracing::ReadSourceAndTracing(fNodes, tree, ref, sourceFile);*/
 
-		cout << "\nTracing rNodes ..." << flush;
+		//cout << "\nTracing rNodes ..." << flush;
 		/*ref = 0;
 		WallAirAbsorb::Init(ref + MAX_REF);*/
 		Tracing::ReadSourceAndTracing(rNodes, tree, ref, sourceFile);

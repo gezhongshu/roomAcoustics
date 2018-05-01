@@ -1,4 +1,5 @@
-1
-data\model\scene11.obj data\matInd\mat_scene11.txt data\source_path\sources11.txt
-data\model\scene10.obj data\matInd\mat_scene10.txt data\source_path\sources10.txt
+3
 data\model\scene09.obj data\matInd\mat_scene09.txt data\source_path\sources09.txt
+data\model\scene10.obj data\matInd\mat_scene10.txt data\source_path\sources10.txt
+data\model\scene11.obj data\matInd\mat_scene11.txt data\source_path\sources11.txt
+data\model\scene09.obj data\matInd\mat_scene09.txt data\source_path\sources09_1.5.txt

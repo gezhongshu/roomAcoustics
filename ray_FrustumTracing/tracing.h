@@ -21,7 +21,7 @@
 namespace Tracing
 {
 	const int NC = 400;
-	const bool PARALLEL = false;
+	const bool PARALLEL = true;
 	static mutex mu_thread, mu_hrir, mu_egy;
 	static int maxThread = thread::hardware_concurrency();
 	extern double angleLim, solid;
@@ -38,28 +38,28 @@ namespace Tracing
 	template<typename T>
 	void RayTracingParallel(BiNode<T> * pr, OBBTree * tree, int ref, int* numThreads);
 	template<typename T>
-	void Traversal(BiNode<T>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band = -2);
+	void Traversal(BiNode<T>* ray, Orient& rec, const vector<double>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band = -2);
 	template<typename T>
-	void TraversalParallel(int *threadNum, BiNode<T>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int> refs, vector<int> mirs, vector<int> scats, int band = -2);
+	void TraversalParallel(int *threadNum, BiNode<T>* ray, Orient& rec, const vector<double>& sDrct, vector<vector<double>>& hrir, vector<int> refs, vector<int> mirs, vector<int> scats, int band = -2);
 	template<typename T>
 	void ColliReceiver(vector<BiNode<T>*>& rays, Orient& s, Orient& r, vector<vector<double>>& hrir, ofstream& fout);
 
-	void AddImpulseResponse(vector<vector<double>>& hrir, const vector<COMPLEX>& sDrct, vector<int> refs, vector<int> mirs, vector<int> scats, int band, Vector4f vec, int id, double len_s, bool scatFlag = false);
+	void AddImpulseResponse(vector<vector<double>>& hrir, const vector<double>& sDrct, vector<int> refs, vector<int> mirs, vector<int> scats, int band, Vector4f vec, int id, double len_s, bool scatFlag = false);
 
 	void TracingInRoom(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref, Vector4f s, int nCircle = NC);
 	void RefRay(BiNode<Ray>* pr, bool divide = true);
 	void ColliRay(Ray* ray, OBBTree* tree);
-	void PassReceiver(BiNode<Ray>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band);
+	void PassReceiver(BiNode<Ray>* ray, Orient& rec, const vector<double>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band);
 	
 	void TracingInRoom(vector<BiNode<FsmNode>*>& rays, OBBTree * tree, int ref, Vector4f s);
 	void RefRay(BiNode<FsmNode>* pr, bool divide = true);
 	void ColliRay(FsmNode* ray, OBBTree* tree);
-	void PassReceiver(BiNode<FsmNode>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band);
+	void PassReceiver(BiNode<FsmNode>* ray, Orient& rec, const vector<double>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band);
 
 	void TracingInRoom(vector<BiNode<RayNode>*>& rays, OBBTree * tree, int ref, Vector4f s);
 	void RefRay(BiNode<RayNode>* pr, bool divide = true);
 	void ColliRay(RayNode* ray, OBBTree* tree);
-	void PassReceiver(BiNode<RayNode>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band);
+	void PassReceiver(BiNode<RayNode>* ray, Orient& rec, const vector<double>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band);
 
 
 	void RayTracing(vector<Ray> &ray, OBBTree* tree, int ref);
@@ -228,9 +228,9 @@ void Tracing::ReadSourceAndTracing(vector<BiNode<T>*>& rays, OBBTree * tree, int
 		bool complete = false;
 		thread task(Direct::paraLoad, directFile, &complete);
 		task.detach();
+		//Direct::LoadMAT(directFile);
 		solid = 0;
 		TracingInRoom(rays, tree, ref, source);
-		//Direct::LoadCSV(directFile);
 		while (!complete) Sleep(1);
 		string tname(typeid(T).name());
 		tname = tname.substr(tname.find_last_of(' ') + 1);
@@ -270,7 +270,7 @@ void Tracing::RayTracingParallel(BiNode<T>* pr, OBBTree * tree, int ref, int * n
 
 
 template <typename T>
-void Tracing::Traversal(BiNode<T>* ray, Orient & rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band)
+void Tracing::Traversal(BiNode<T>* ray, Orient & rec, const vector<double>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band)
 {
 	if (!ray)
 	{
@@ -309,7 +309,7 @@ void Tracing::Traversal(BiNode<T>* ray, Orient & rec, const vector<COMPLEX>& sDr
 }
 
 template <typename T>
-void Tracing::TraversalParallel(int * numThreads, BiNode<T>* ray, Orient & rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int> refs, vector<int> mirs, vector<int> scats, int band)
+void Tracing::TraversalParallel(int * numThreads, BiNode<T>* ray, Orient & rec, const vector<double>& sDrct, vector<vector<double>>& hrir, vector<int> refs, vector<int> mirs, vector<int> scats, int band)
 {
 	Tracing::Traversal(ray, rec, sDrct, hrir, refs, mirs, scats, band);
 	mu_thread.lock();
@@ -321,7 +321,7 @@ template <typename T>
 void Tracing::ColliReceiver(vector<BiNode<T>*>& rays, Orient& s, Orient& r, vector<vector<double>>& hrir, ofstream& fout)
 {
 
-	vector<COMPLEX> sDrct;
+	vector<double> sDrct;
 	vector<int> refs(WallAirAbsorb::GetMatNum(), 0), mirs(WallAirAbsorb::GetMatNum(), 0), scats(WallAirAbsorb::GetMatNum(), 0);
 	cout << endl;
 	int totalTask = 0, numRay = 0;

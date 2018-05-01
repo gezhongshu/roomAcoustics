@@ -1,6 +1,6 @@
 5
-LS3 1.498 -1.974 1.026 -0.1512608 0.9884938 0.0 0.0 0.0 1.0 .\data\QSCK8.csv .\data\source_path\man09.txt
-LS4 0.758 -3.17 1.026 -0.06627390 0.9978015 0.0 0.0 0.0 1.0 .\data\QSCK8.csv .\data\source_path\man09.txt
-LS5 -0.746 -3.17 1.03 0.06627390 0.9978015 0.0 0.0 0.0 1.0 .\data\QSCK8.csv .\data\source_path\man09.txt
-LS6 -1.502 -1.974 0.816 0.1512608 0.9884938 0.0 0.0 0.0 1.0 .\data\QSCK8.csv .\data\source_path\man09.txt
-LS7 0.0 -1.974 1.5 0.0 1.0 0.0 0.0 0.0 1.0 .\data\QSCK8.csv .\data\source_path\man09.txt
+LS3 1.498 -1.974 1.026 -0.1512608 0.9884938 0.0 0.0 0.0 1.0 .\data\QSCK8.mat .\data\source_path\man09.txt
+LS4 0.758 -3.17 1.026 -0.06627390 0.9978015 0.0 0.0 0.0 1.0 .\data\QSCK8.mat .\data\source_path\man09.txt
+LS5 -0.746 -3.17 1.03 0.06627390 0.9978015 0.0 0.0 0.0 1.0 .\data\QSCK8.mat .\data\source_path\man09.txt
+LS6 -1.502 -1.974 0.816 0.1512608 0.9884938 0.0 0.0 0.0 1.0 .\data\QSCK8.mat .\data\source_path\man09.txt
+LS7 0.0 -1.974 1.5 0.0 1.0 0.0 0.0 0.0 1.0 .\data\QSCK8.mat .\data\source_path\man09.txt

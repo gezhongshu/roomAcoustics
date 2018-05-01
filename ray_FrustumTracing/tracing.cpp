@@ -7,42 +7,46 @@ double Tracing::solid = 0;
 int counth = 0;
 double maxh = 0;
 
-void Tracing::AddImpulseResponse(vector<vector<double>>& hrir, const vector<COMPLEX>& sDrct, vector<int> refs, vector<int> mirs, vector<int> scats, int band, Vector4f vec, int id, double len, bool scatFlag)
+void Tracing::AddImpulseResponse(vector<vector<double>>& hrir, const vector<double>& sDrct, vector<int> refs, vector<int> mirs, vector<int> scats, int band, Vector4f vec, int id, double len, bool scatFlag)
 {
 	int nref = 0;
 	for (auto r : refs)
 		nref += r;
 	//nref = 1 - 2 * (nref % 2);
-	//nref = 1;
+	nref = 0;
 	vector<double> bRef, hrir_s;
 	vector<COMPLEX> cRef;
-	double delay = 0;// id - len * FS / SOUND_SPEED;
+	double delay = id - len * FS / SOUND_SPEED;
 	vector<double> phaseAdj = WallAirAbsorb::FreqMult(delay * 2 * pi / FS);
 	bRef = WallAirAbsorb::Absorb(len, refs, mirs, scats, band);
 	double egy = 0, eh = 0, ec = 0;
-	for (auto c : sDrct)
-		egy += c.Energy();
+	/*for (auto c : sDrct)
+		egy += c.Energy();*/
 	if (bRef.size() < 10)
 		cout << "bRef.size() = " << bRef.size() << endl;
 	for (int i = 0; i < bRef.size(); i++)
-		cRef.push_back(Mul(COMPLEX(bRef[i] * sDrct[i].re, bRef[i] * sDrct[i].im), COMPLEX(cos(phaseAdj[i]), sin(phaseAdj[i]))));
+		cRef.push_back(Mul(COMPLEX(bRef[i], 0), COMPLEX(cos(phaseAdj[i]), sin(phaseAdj[i]))));
 	for (auto c : cRef)
 		ec += c.Energy();
 	hrir_s = WallAirAbsorb::InterpIFFT(cRef);
-	for (auto h : hrir_s)
-		eh += h*h;
-	for (int ihs = 0; ihs < hrir_s.size(); ihs++)
+	vector<vector<double>> hrir_D;
+	for (auto sd : sDrct)
+		hrir_D.push_back(vector<double>(1, sd));
+	hrir_D = WallAirAbsorb::ConvHrir(hrir_s, hrir_D);
+	for (auto h : hrir_D)
+		eh += h[0]*h[0];
+	for (int ihs = 0; ihs < hrir_D.size(); ihs++)
 	{
-		int ind = id + ihs - hrir_s.size() / 2;
+		int ind = id + ihs - hrir_s.size() / 2 - 128;
 		if (ind >= LEN_RIR)break;
 		if (ind < 0)continue;
 		double coef = scatFlag ? egyCoef : 1;
 		mu_hrir.lock();
-		hrir[ind][0] += coef*(1 - 2 * (nref % 2))*hrir_s[ihs];
+		hrir[ind][0] += coef*(1 - 2 * (nref % 2))*hrir_D[ihs][0];
 		/*if (ind == 1443 && scatFlag)
 		{
 			counth++;
-			maxh += coef*(1 - 2 * (nref % 2))*hrir_s[ihs];
+			maxh += coef*(1 - 2 * (nref % 2))*hrir_D[ihs];
 			if (counth % 100 == 0)
 			{
 				cout << "\n\tcount: " << counth << "\tmax: " << maxh << "\tref: " << nref << "\tlen: " << len << endl;
@@ -139,7 +143,7 @@ void Tracing::ColliRay(Ray * ray, OBBTree * tree)
 	OBBIntersection::CollisionTest(ray, tree);
 }
 
-void Tracing::PassReceiver(BiNode<Ray>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band)
+void Tracing::PassReceiver(BiNode<Ray>* ray, Orient& rec, const vector<double>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band)
 {
 	int id, n = hrir.size();
 	double chordLen, proj;
@@ -155,7 +159,7 @@ void Tracing::PassReceiver(BiNode<Ray>* ray, Orient& rec, const vector<COMPLEX>&
 	double len = ray->data.GetDist() + vec.GetLenght();
 	vec.SetLenght(len);
 	id = (int)round(len * FS / SOUND_SPEED);
-	if (id >= n || Vector4f::Dot3f(rec.GetPos() - r.GetStartPt(), r.GetRef()) + r.GetRef().w < 0)return;
+	if (id >= n+256 || Vector4f::Dot3f(rec.GetPos() - r.GetStartPt(), r.GetRef()) + r.GetRef().w < 0)return;
 	int n_r = 0;
 	for (auto r : refs)
 		n_r += r;
@@ -259,7 +263,7 @@ void Tracing::ColliRay(FsmNode * ray, OBBTree * tree)
 	ColliFace(*ray, tree);
 }
 
-void Tracing::PassReceiver(BiNode<FsmNode>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band)
+void Tracing::PassReceiver(BiNode<FsmNode>* ray, Orient& rec, const vector<double>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band)
 {
 	int id, n = hrir.size();
 	double len;
@@ -402,7 +406,7 @@ void Tracing::ColliRay(RayNode * ray, OBBTree * tree)
 	ray->CutFsm();
 }
 
-void Tracing::PassReceiver(BiNode<RayNode>* ray, Orient& rec, const vector<COMPLEX>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band)
+void Tracing::PassReceiver(BiNode<RayNode>* ray, Orient& rec, const vector<double>& sDrct, vector<vector<double>>& hrir, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band)
 {
 	int id, n = hrir.size();
 	double len, len_s;
@@ -421,13 +425,13 @@ void Tracing::PassReceiver(BiNode<RayNode>* ray, Orient& rec, const vector<COMPL
 	Ray r = ray->data.ray;
 	len = r.GetDist() + (r.GetStartPt() - rec.GetPos()).GetLenght(); //vec.GetLenght();
 	id = (int)round(len * FS / SOUND_SPEED);
-	if (id >= n || Vector4f::Dot3f(rec.GetPos() - r.GetStartPt(), r.GetRef()) + r.GetRef().w < 0)return;
+	if (id >= n+256 || Vector4f::Dot3f(rec.GetPos() - r.GetStartPt(), r.GetRef()) + r.GetRef().w < 0)return;
 	len_s = r.GetDist();
 	int n_r = 0;
 	for (auto r : refs)
 		n_r += r;
 	mu_egy.lock();
-	egyCoef = ray->data.fsm.GetSolidAngle() * len / (len - len_s) / pi / 4;
+	egyCoef = ray->data.fsm.GetSolidAngle() * len * Vector4f::Dot3f(r.GetRef(), r.GetDirect()) / pi / 4;
 	if (n_r == 1)scatCount++;
 	if (n_r == 1)solid += ray->data.fsm.GetSolidAngle();
 	if (n_r)

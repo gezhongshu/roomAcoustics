@@ -285,9 +285,9 @@ void WallAirAbsorb::LoadMat(vector<string> fileNames)
 	}
 }
 
-vector<vector<float>> WallAirAbsorb::ConvHrir(vector<double> filter, vector<vector<float>> hrir)
+vector<vector<double>> WallAirAbsorb::ConvHrir(vector<double> filter, vector<vector<double>> hrir)
 {
-	vector<vector<float>> hrirFiltered = vector<vector<float>>(filter.size() + hrir.size() - 1, vector<float>(2, 0));
+	vector<vector<double>> hrirFiltered = vector<vector<double>>(filter.size() + hrir.size() - 1, vector<double>(2, 0));
 	for (int i = 0; i < filter.size(); i++)
 		for (int j = (i>=hrir.size()?i-hrir.size()+1:0); j <= i; j++)
 			for (int k = 0; k < 2; k++)
@@ -296,7 +296,7 @@ vector<vector<float>> WallAirAbsorb::ConvHrir(vector<double> filter, vector<vect
 		for (int j = (i >= hrir.size() ? i - hrir.size() + 1 : 0); j < filter.size(); j++)
 			for (int k = 0; k < 2; k++)
 				hrirFiltered[i][k] += hrir[i - j][k] * filter[j];
-	double maxV = 0;
+	/*double maxV = 0;
 	int maxInd;
 	vector<double> absHrir;
 	for (int i = 0; i < hrirFiltered.size(); i++)
@@ -319,7 +319,7 @@ vector<vector<float>> WallAirAbsorb::ConvHrir(vector<double> filter, vector<vect
 	{
 		auto iter = hrirFiltered.begin() + maxInd;
 		hrirFiltered.erase(hrirFiltered.begin(), iter);
-	}
+	}*/
 	return hrirFiltered;
 }
 
@@ -389,8 +389,8 @@ vector<double> WallAirAbsorb::InterpIFFT(vector<COMPLEX> fqValues, vector<double
 		href.push_back(Tref[i].re);
 	for (int i = 0; i <= halfI; i++)
 		href.push_back(Tref[i].re);
-	/*for (int i = 0; i < href.size(); i++)
-		href[i] *= window[i];*/
+	for (int i = 0; i < href.size(); i++)
+		href[i] *= window[i];
 	free(Tref);
 	free(Fref);
 	return href;
@@ -415,7 +415,33 @@ Direct::~Direct()
 {
 }
 
-void Direct::LoadCSV(string fileName)
+//void Direct::LoadCSV(string fileName)
+//{
+//	string name = fileName.substr(fileName.find_last_of('\\'));
+//	if (type.size() > 0)
+//		if (type == name)
+//			return;
+//	type = name;
+//	cout << "\nLoading the source directional file " << type << " ..." << endl;
+//	fstream fin(fileName, ios::in);
+//	COMPLEX temp;
+//	string line;
+//	getline(fin, line);
+//	while (getline(fin, line))
+//	{
+//		vector<string> values = splitLine(line, ',');
+//		string head = values.front();
+//		int phi, theta;
+//		phi = getNumbers(head.substr(1, 3)).front();
+//		theta = getNumbers(head.substr(5, 3)).front();
+//		values.erase(values.begin());
+//		for (auto v : values)
+//			if (getNumbers(v, temp)) directions[phi][theta].push_back(temp);
+//	}
+//	cout << "\nDirectional file loaded." << endl;
+//}
+
+void Direct::LoadMAT(string fileName)
 {
 	string name = fileName.substr(fileName.find_last_of('\\'));
 	if (type.size() > 0)
@@ -423,41 +449,43 @@ void Direct::LoadCSV(string fileName)
 			return;
 	type = name;
 	cout << "\nLoading the source directional file " << type << " ..." << endl;
-	fstream fin(fileName, ios::in);
-	COMPLEX temp;
-	string line;
-	getline(fin, line);
-	while (getline(fin, line))
+	fstream fin(fileName, ios::in | ios::binary);
+	const int len = 4096, num = 64442;
+	double IR[len];
+	directions.reserve(sizeof(double) * 512 * num * 2);
+	for (int i = 0; i < num; i++)
 	{
-		vector<string> values = splitLine(line, ',');
-		string head = values.front();
+		fin.read((char*)IR, sizeof(double) * len);
 		int phi, theta;
-		phi = getNumbers(head.substr(1, 3)).front();
-		theta = getNumbers(head.substr(5, 3)).front();
-		values.erase(values.begin());
-		for (auto v : values)
-			if (getNumbers(v, temp)) directions[phi][theta].push_back(temp);
+		if (i == 0)
+			phi = 0, theta = 0;
+		else
+		{
+			theta = (i - 1) / 360 + 1;
+			phi = (i - 1) % 360;
+		}
+		directions[theta][phi] = vector<double>(&IR[0], &IR[512]);
 	}
 	cout << "\nDirectional file loaded." << endl;
 }
 
 void Direct::paraLoad(string fileName, bool * complete)
 {
-	LoadCSV(fileName);
+	LoadMAT(fileName);
 	*complete = true;
 }
 
-vector<COMPLEX> Direct::EvalAmp(int azim, int elev)
+vector<double> Direct::EvalAmp(int azim, int elev)
 {
-	return directions[azim][90 - elev];
+	return directions[90 - elev][azim];
 }
 
-vector<COMPLEX> Direct::EvalAmp(vector<int> polar)
+vector<double> Direct::EvalAmp(vector<int> polar)
 {
-	return vector<COMPLEX>(31, COMPLEX(1, 0));// directions[polar[0]][polar[1]];
+	return directions[polar[1]][polar[0]];
 }
 
-vector<vector<vector<COMPLEX>>> Direct::directions(vector<vector<vector<COMPLEX>>>(360, vector<vector<COMPLEX>>(181, vector<COMPLEX>())));
+vector<vector<vector<double>>> Direct::directions(vector<vector<vector<double>>>(181, vector<vector<double>>(360, vector<double>())));
 string Direct::type = string();
 
 
