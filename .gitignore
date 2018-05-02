@@ -66,9 +66,12 @@ artifacts/
 *.svclog
 *.scc
 
+*.db
+
 # user generated files
 *.dat
 *.binary
+*.bin
 
 # Chutzpah Test files
 _Chutzpah*
