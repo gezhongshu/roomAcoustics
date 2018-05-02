@@ -1,13 +1,13 @@
 12
-LS1pX -2.02 -2.0 2.76 1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths10.txt
-LS1nX -2.02 -2.0 2.76 -1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths10.txt
-LS1pY -2.02 -2.0 2.76 0.0 1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths10.txt
-LS1nY -2.02 -2.0 2.76 0.0 -1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths10.txt
-LS2pX -3.32 -2.0 2.76 1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths10.txt
-LS2nX -3.32 -2.0 2.76 -1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths10.txt
-LS2pY -3.32 -2.0 2.76 0.0 1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths10.txt
-LS2nY -3.32 -2.0 2.76 0.0 -1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths10.txt
-LS3pX 4.812 2.358 1.76 1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths10.txt
-LS3nX 4.812 2.358 1.76 -1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths10.txt
-LS3pY 4.812 2.358 1.76 0.0 1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths10.txt
-LS3nY 4.812 2.358 1.76 0.0 -1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths10.txt
+LS1pX -2.02 -2.0 2.76 1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths10.txt
+LS1nX -2.02 -2.0 2.76 -1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths10.txt
+LS1pY -2.02 -2.0 2.76 0.0 1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths10.txt
+LS1nY -2.02 -2.0 2.76 0.0 -1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths10.txt
+LS2pX -3.32 -2.0 2.76 1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths10.txt
+LS2nX -3.32 -2.0 2.76 -1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths10.txt
+LS2pY -3.32 -2.0 2.76 0.0 1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths10.txt
+LS2nY -3.32 -2.0 2.76 0.0 -1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths10.txt
+LS3pX 4.812 2.358 1.76 1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths10.txt
+LS3nX 4.812 2.358 1.76 -1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths10.txt
+LS3pY 4.812 2.358 1.76 0.0 1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths10.txt
+LS3nY 4.812 2.358 1.76 0.0 -1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths10.txt
