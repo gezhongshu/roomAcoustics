@@ -535,7 +535,7 @@ vector<double> Direct::EvalAmp(int azim, int elev)
 
 vector<double> Direct::EvalAmp(vector<int> polar)
 {
-	return vector<double>(1, 1);// directions[polar[1]][polar[0]];
+	return directions[polar[1]][polar[0]];
 }
 
 vector<vector<vector<double>>> Direct::directions(vector<vector<vector<double>>>(181, vector<vector<double>>(360, vector<double>())));
