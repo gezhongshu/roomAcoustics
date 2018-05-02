@@ -1,6 +1,6 @@
 5
-LS3 -2.02 -1.5 2.03 0.9884939 0.1512608 0.0 0.0 0.0 1.0 .\data\QSCK8.mat .\data\source_path\man10.txt
-LS4 -3.32 -0.75 2.03 0.9978014 0.06627390 0.0 0.0 0.0 1.0 .\data\QSCK8.mat .\data\source_path\man10.txt
-LS5 -3.32 0.75 2.03 0.9978014 -0.06627390 0.0 0.0 0.0 1.0 .\data\QSCK8.mat .\data\source_path\man10.txt
-LS6 -2.02 1.5 1.81 0.9884939 -0.1512608 0.0 0.0 0.0 1.0 .\data\QSCK8.mat .\data\source_path\man10.txt
-LS7 -2.02 0.0 2.5 1.0 0.0 0.0 0.0 0.0 1.0 .\data\QSCK8.mat .\data\source_path\man10.txt
+LS3 -2.02 -1.5 2.03 0.9884939 0.1512608 0.0 0.0 0.0 1.0 .\data\QSCK8.bin .\data\source_path\man10.txt
+LS4 -3.32 -0.75 2.03 0.9978014 0.06627390 0.0 0.0 0.0 1.0 .\data\QSCK8.bin .\data\source_path\man10.txt
+LS5 -3.32 0.75 2.03 0.9978014 -0.06627390 0.0 0.0 0.0 1.0 .\data\QSCK8.bin .\data\source_path\man10.txt
+LS6 -2.02 1.5 1.81 0.9884939 -0.1512608 0.0 0.0 0.0 1.0 .\data\QSCK8.bin .\data\source_path\man10.txt
+LS7 -2.02 0.0 2.5 1.0 0.0 0.0 0.0 0.0 1.0 .\data\QSCK8.bin .\data\source_path\man10.txt

@@ -214,3 +214,5 @@ GeneratedArtifacts/
 _Pvt_Extensions/
 ModelManifest.xml
 /ray_FrustumTracing/data/Genelec8020.mat
+/ray_FrustumTracing/data/Genelec8020.bin
+/ray_FrustumTracing/data/HRIR.bin

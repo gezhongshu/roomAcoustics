@@ -1,12 +1,12 @@
 8
-LS1pX 0.6207 -1.698 0.82  1.0  0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths09_1.5.txt
-LS1nX 0.6207 -1.698 0.82 -1.0  0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths09_1.5.txt
-LS1pY 0.6207 -1.698 0.82  0.0  1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths09_1.5.txt
-LS1nY 0.6207 -1.698 0.82  0.0 -1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths09_1.5.txt
-LS2pX 0.0793  1.920 0.82  1.0  0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths09_1.5.txt
-LS2nX 0.0793  1.920 0.82 -1.0  0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths09_1.5.txt
-LS2pY 0.0793  1.920 0.82  0.0  1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths09_1.5.txt
-LS2nY 0.0793  1.920 0.82  0.0 -1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.mat .\data\source_path\paths09_1.5.txt
+LS1pX 0.6207 -1.698 0.82  1.0  0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths09_1.5.txt
+LS1nX 0.6207 -1.698 0.82 -1.0  0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths09_1.5.txt
+LS1pY 0.6207 -1.698 0.82  0.0  1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths09_1.5.txt
+LS1nY 0.6207 -1.698 0.82  0.0 -1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths09_1.5.txt
+LS2pX 0.0793  1.920 0.82  1.0  0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths09_1.5.txt
+LS2nX 0.0793  1.920 0.82 -1.0  0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths09_1.5.txt
+LS2pY 0.0793  1.920 0.82  0.0  1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths09_1.5.txt
+LS2nY 0.0793  1.920 0.82  0.0 -1.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\paths09_1.5.txt
     
     
     
