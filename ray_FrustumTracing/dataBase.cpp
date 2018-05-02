@@ -9,16 +9,69 @@ HRIR::~HRIR()
 {
 }
 
+void HRIR::LoadBIN(string fileName)
+{
+	string name = fileName.substr(fileName.find_last_of('\\'));
+	if (type.size() > 0)
+		if (type == name)
+			return;
+	type = name;
+	cout << "\nLoading the source directional file " << type << " ..." << endl;
+	fstream fin(fileName, ios::in | ios::binary);
+	const int len = 512, num = 64442;
+	double HRIR[len];
+	db.reserve(sizeof(double) * 512 * num);
+	for (int i = 0; i < num; i++)
+	{
+		fin.read((char*)HRIR, sizeof(double) * len);
+		int phi, theta;
+		if (i == 0)
+			phi = 0, theta = 0;
+		else
+		{
+			theta = (i - 1) / 360 + 1;
+			phi = (i - 1) % 360;
+		}
+		db[theta][phi].push_back(vector<double>(&HRIR[0], &HRIR[256]));
+		db[theta][phi].push_back(vector<double>(&HRIR[256], &HRIR[512]));
+	}
+	cout << "\nDirectional file loaded." << endl;
+}
+
+void HRIR::paraLoad(string fileName, bool * complete)
+{
+	LoadBIN(fileName);
+	*complete = true;
+}
+
+vector<vector<double>> HRIR::EvalAmp(int azim, int elev)
+{
+	return db[90 - elev][azim];
+}
+
+vector<vector<double>> HRIR::EvalAmp(vector<int> polar)
+{
+	return db[polar[1]][polar[0]];
+}
+
+vector<vector<vector<vector<double>>>> 
+HRIR::db(vector<vector<vector<vector<double>>>>(181, 
+	vector<vector<vector<double>>>(360, 
+		vector<vector<double>>(2, 
+			vector<double>()))));
+string HRIR::type = string();
+
+
 void HRIR::LoadHrir()
 {
 	string file = ".\\data\\hrir\\hrir_big_d160.dat";
 	fstream fin(file, ios::in);
 	int ih, el, az, tmp;
 	fin >> ih >> tmp >> el >> az;
-	HRIR::db = vector<vector<vector<vector<float>>>>(el,
-		vector < vector < vector<float>>>(az,
-			vector < vector<float>>(ih,
-				vector<float>(2))));
+	HRIR::db = vector<vector<vector<vector<double>>>>(el,
+		vector < vector < vector<double>>>(az,
+			vector < vector<double>>(ih,
+				vector<double>(2))));
 	for (int i = 0; i < el; i++)
 		for (int j = 0; j < az; j++)
 			for (int k = 0; k < ih; k++)
@@ -26,7 +79,7 @@ void HRIR::LoadHrir()
 					fin >> db[i][j][k][l];
 }
 
-void HRIR::JudgeDirection(Vector4f drct, Vector4f front, Vector4f up, vector<vector<float>>& hrir_s)
+void HRIR::JudgeDirection(Vector4f drct, Vector4f front, Vector4f up, vector<vector<double>>& hrir_s)
 {
 	Vector4f right = Vector4f::Cross3f(front, up);
 	right.SetLenght(1.0); front.SetLenght(1.0); up.SetLenght(1.0); drct.SetLenght(1.0);
@@ -66,9 +119,9 @@ void HRIR::JudgeDirection(Vector4f drct, Vector4f front, Vector4f up, vector<vec
 	hrir_s = InterpHrir(elev, L1, azim, L2);
 }
 
-vector<vector<float>> HRIR::InterpHrir(int el, float L1, int az, float L2)
+vector<vector<double>> HRIR::InterpHrir(int el, float L1, int az, float L2)
 {
-	vector<vector<float>> hrir;
+	vector<vector<double>> hrir;
 	if (1 - L1 < 0.1)
 	{
 		if (1 - L2 < 0.1)
@@ -79,7 +132,7 @@ vector<vector<float>> HRIR::InterpHrir(int el, float L1, int az, float L2)
 		{
 			for (int i = 0; i < db[el][az].size(); i++)
 			{
-				hrir.push_back(vector<float>());
+				hrir.push_back(vector<double>());
 				for (int j = 0; j < 2; j++)
 					hrir.back().push_back(db[el][az][i][j] * L2 
 						+ db[el][az + 1][i][j] * (1 - L2));
@@ -92,7 +145,7 @@ vector<vector<float>> HRIR::InterpHrir(int el, float L1, int az, float L2)
 		{
 			for (int i = 0; i < db[el][az].size(); i++)
 			{
-				hrir.push_back(vector<float>());
+				hrir.push_back(vector<double>());
 				for (int j = 0; j < 2; j++)
 					hrir.back().push_back(db[el][az][i][j] * L1
 						+ db[el + 1][az][i][j] * (1 - L1));
@@ -102,7 +155,7 @@ vector<vector<float>> HRIR::InterpHrir(int el, float L1, int az, float L2)
 		{
 			for (int i = 0; i < db[el][az].size(); i++)
 			{
-				hrir.push_back(vector<float>());
+				hrir.push_back(vector<double>());
 				for (int j = 0; j < 2; j++)
 					hrir.back().push_back(db[el][az][i][j] * L2 * L1
 						+ db[el][az + 1][i][j] * (1 - L2) * L1
@@ -115,11 +168,11 @@ vector<vector<float>> HRIR::InterpHrir(int el, float L1, int az, float L2)
 }
 
 
-vector<vector<vector<vector<float>>>>
-HRIR::db = vector<vector<vector<vector<float>>>>(14,
-	vector < vector < vector<float>>>(80,
-		vector < vector<float>>(200,
-			vector<float>(2))));
+//vector<vector<vector<vector<float>>>>
+//HRIR::db = vector<vector<vector<vector<float>>>>(14,
+//	vector < vector < vector<float>>>(80,
+//		vector < vector<float>>(200,
+//			vector<float>(2))));
 
 WallAirAbsorb::WallAirAbsorb()
 {
@@ -287,15 +340,15 @@ void WallAirAbsorb::LoadMat(vector<string> fileNames)
 
 vector<vector<double>> WallAirAbsorb::ConvHrir(vector<double> filter, vector<vector<double>> hrir)
 {
-	vector<vector<double>> hrirFiltered = vector<vector<double>>(filter.size() + hrir.size() - 1, vector<double>(2, 0));
+	vector<vector<double>> hrirFiltered = vector<vector<double>>(2, vector<double>(filter.size() + hrir[0].size() - 1, 0));
 	for (int i = 0; i < filter.size(); i++)
-		for (int j = (i>=hrir.size()?i-hrir.size()+1:0); j <= i; j++)
-			for (int k = 0; k < 2; k++)
-				hrirFiltered[i][k] += hrir[i - j][k] * filter[j];
+		for (int k = 0; k < 2; k++)
+			for (int j = (i >= hrir.size() ? i - hrir.size() + 1 : 0); j <= i; j++)
+				hrirFiltered[k][i] += hrir[k][i - j] * filter[j];
 	for (int i = filter.size(); i < hrirFiltered.size(); i++)
-		for (int j = (i >= hrir.size() ? i - hrir.size() + 1 : 0); j < filter.size(); j++)
-			for (int k = 0; k < 2; k++)
-				hrirFiltered[i][k] += hrir[i - j][k] * filter[j];
+		for (int k = 0; k < 2; k++)
+			for (int j = (i >= hrir.size() ? i - hrir.size() + 1 : 0); j < filter.size(); j++)
+				hrirFiltered[k][i] += hrir[k][i - j] * filter[j];
 	/*double maxV = 0;
 	int maxInd;
 	vector<double> absHrir;
@@ -441,7 +494,7 @@ Direct::~Direct()
 //	cout << "\nDirectional file loaded." << endl;
 //}
 
-void Direct::LoadMAT(string fileName)
+void Direct::LoadBIN(string fileName)
 {
 	string name = fileName.substr(fileName.find_last_of('\\'));
 	if (type.size() > 0)
@@ -471,7 +524,7 @@ void Direct::LoadMAT(string fileName)
 
 void Direct::paraLoad(string fileName, bool * complete)
 {
-	LoadMAT(fileName);
+	LoadBIN(fileName);
 	*complete = true;
 }
 

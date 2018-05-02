@@ -44,7 +44,7 @@ namespace Tracing
 	template<typename T>
 	void ColliReceiver(vector<BiNode<T>*>& rays, Orient& s, Orient& r, vector<vector<double>>& hrir, ofstream& fout);
 
-	void AddImpulseResponse(vector<vector<double>>& hrir, const vector<double>& sDrct, vector<int> refs, vector<int> mirs, vector<int> scats, int band, Vector4f vec, int id, double len_s, bool scatFlag = false);
+	void AddImpulseResponse(vector<vector<double>>& hrir, const vector<vector<double>>& sDrct, vector<int> refs, vector<int> mirs, vector<int> scats, int band, Vector4f vec, int id, double len_s, bool scatFlag = false);
 
 	void TracingInRoom(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref, Vector4f s, int nCircle = NC);
 	void RefRay(BiNode<Ray>* pr, bool divide = true);
@@ -228,7 +228,7 @@ void Tracing::ReadSourceAndTracing(vector<BiNode<T>*>& rays, OBBTree * tree, int
 		bool complete = false;
 		thread task(Direct::paraLoad, directFile, &complete);
 		task.detach();
-		//Direct::LoadMAT(directFile);
+		//Direct::LoadBIN(directFile);
 		solid = 0;
 		TracingInRoom(rays, tree, ref, source);
 		while (!complete) Sleep(1);

@@ -7,7 +7,7 @@ double Tracing::solid = 0;
 int counth = 0;
 double maxh = 0;
 
-void Tracing::AddImpulseResponse(vector<vector<double>>& hrir, const vector<double>& sDrct, vector<int> refs, vector<int> mirs, vector<int> scats, int band, Vector4f vec, int id, double len, bool scatFlag)
+void Tracing::AddImpulseResponse(vector<vector<double>>& hrir, const vector<vector<double>>& sDrct, vector<int> refs, vector<int> mirs, vector<int> scats, int band, Vector4f vec, int id, double len, bool scatFlag)
 {
 	int nref = 0;
 	for (auto r : refs)
@@ -30,9 +30,7 @@ void Tracing::AddImpulseResponse(vector<vector<double>>& hrir, const vector<doub
 		ec += c.Energy();
 	hrir_s = WallAirAbsorb::InterpIFFT(cRef);
 	vector<vector<double>> hrir_D;
-	for (auto sd : sDrct)
-		hrir_D.push_back(vector<double>(1, sd));
-	hrir_D = WallAirAbsorb::ConvHrir(hrir_s, hrir_D);
+	hrir_D = WallAirAbsorb::ConvHrir(hrir_s, sDrct);
 	for (auto h : hrir_D)
 		eh += h[0]*h[0];
 	for (int ihs = 0; ihs < hrir_D.size(); ihs++)
@@ -160,13 +158,15 @@ void Tracing::PassReceiver(BiNode<Ray>* ray, Orient& rec, const vector<double>& 
 	vec.SetLenght(len);
 	id = (int)round(len * FS / SOUND_SPEED);
 	if (id >= n+256 || Vector4f::Dot3f(rec.GetPos() - r.GetStartPt(), r.GetRef()) + r.GetRef().w < 0)return;
+	vector<vector<double>> hrir = HRIR::EvalAmp(rec.LocalPolar(r.GetStartPt() - rec.GetPos()));
+	vector<vector<double>> sDHrir = WallAirAbsorb::ConvHrir(sDrct, hrir);
 	int n_r = 0;
 	for (auto r : refs)
 		n_r += r;
 	if (n_r)
-		AddImpulseResponse(hrir, sDrct, refs, vector<int>(refs.size(), 0), scats, band, vec, id, len, true);
+		AddImpulseResponse(hrir, sDHrir, refs, vector<int>(refs.size(), 0), scats, band, vec, id, len, true);
 	if(chordLen / len <= Tracing::angleLim && proj <= r.GetEnd())
-		AddImpulseResponse(hrir, sDrct, refs, mirs, vector<int>(refs.size(), 0), band, vec, id, len);
+		AddImpulseResponse(hrir, sDHrir, refs, mirs, vector<int>(refs.size(), 0), band, vec, id, len);
 }
 
 
@@ -286,6 +286,8 @@ void Tracing::PassReceiver(BiNode<FsmNode>* ray, Orient& rec, const vector<doubl
 	Vector4f norm = ray->data.fsm.GetNorm().back();
 	if (id >= n || Vector4f::Dot3f(norm, rec.GetPos()) + norm.w <= 0)return;
 	double len_s = ray->data.fsm.GetCorner().front().GetBegin() + (ray->data.fsm.GetCorner().back().GetBeginPt() - rec.GetPos()).GetLenght();
+	vector<vector<double>> hrir = HRIR::EvalAmp(rec.LocalPolar(ray->data.fsm.GetVertex() - rec.GetPos()));
+	vector<vector<double>> sDHrir = WallAirAbsorb::ConvHrir(sDrct, hrir);
 	int n_r = 0;
 	for (auto r : refs)
 		n_r += r;
@@ -294,10 +296,10 @@ void Tracing::PassReceiver(BiNode<FsmNode>* ray, Orient& rec, const vector<doubl
 	if (n_r == 1)scatCount++;
 	if (n_r == 1)solid += ray->data.fsm.GetSolidAngle();
 	if (n_r)
-		AddImpulseResponse(hrir, sDrct, refs, vector<int>(refs.size(), 0), scats, band, vec, id, len_s, true);
+		AddImpulseResponse(hrir, sDHrir, refs, vector<int>(refs.size(), 0), scats, band, vec, id, len_s, true);
 	mu_egy.unlock();
 	if (colli)
-		AddImpulseResponse(hrir, sDrct, refs, mirs, scats, band, vec, id, len);
+		AddImpulseResponse(hrir, sDHrir, refs, mirs, scats, band, vec, id, len);
 }
 
 
@@ -427,6 +429,8 @@ void Tracing::PassReceiver(BiNode<RayNode>* ray, Orient& rec, const vector<doubl
 	id = (int)round(len * FS / SOUND_SPEED);
 	if (id >= n+256 || Vector4f::Dot3f(rec.GetPos() - r.GetStartPt(), r.GetRef()) + r.GetRef().w < 0)return;
 	len_s = r.GetDist();
+	vector<vector<double>> hrir = HRIR::EvalAmp(rec.LocalPolar(r.GetStartPt() - rec.GetPos()));
+	vector<vector<double>> sDHrir = WallAirAbsorb::ConvHrir(sDrct, hrir);
 	int n_r = 0;
 	for (auto r : refs)
 		n_r += r;
@@ -435,10 +439,10 @@ void Tracing::PassReceiver(BiNode<RayNode>* ray, Orient& rec, const vector<doubl
 	if (n_r == 1)scatCount++;
 	if (n_r == 1)solid += ray->data.fsm.GetSolidAngle();
 	if (n_r)
-		AddImpulseResponse(hrir, sDrct, refs, vector<int>(refs.size(), 0), scats, band, vec, id, len, true);
+		AddImpulseResponse(hrir, sDHrir, refs, vector<int>(refs.size(), 0), scats, band, vec, id, len, true);
 	mu_egy.unlock();
 	if (colli)
-		AddImpulseResponse(hrir, sDrct, refs, mirs, vector<int>(refs.size(), 0), band, vec, id, len);
+		AddImpulseResponse(hrir, sDHrir, refs, mirs, vector<int>(refs.size(), 0), band, vec, id, len);
 }
 
 
@@ -505,7 +509,7 @@ void Tracing::ColliReceiver(vector<vector<Ray>>& rays, Vector4f rec, Vector4f fr
 	int id, n = hrir.size();
 	double chordLen, proj, Amp, length, angleLim = 0.05;//0.05 means a diameter of 5 cm at 1 meter distance
 	Vector4f vec;
-	vector<vector<float>> hrir_s;
+	vector<vector<double>> hrir_s;
 	for (int i = 0; i < rays.size(); i++)
 	{
 		Amp = 1.f;

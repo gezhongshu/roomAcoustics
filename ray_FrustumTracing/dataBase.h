@@ -23,12 +23,18 @@ class HRIR
 public:
 	HRIR();
 	~HRIR();
+	static void LoadBIN(string fileName);
+	static void paraLoad(string fineName, bool * complete);
+	static vector<vector<double>> EvalAmp(int azim, int elev);
+	static vector<vector<double>> EvalAmp(vector<int> polar);
+
 	static void LoadHrir();
-	static void JudgeDirection(Vector4f drct, Vector4f front, Vector4f up, vector<vector<float>> & hrir_s);
-	static vector<vector<float>> InterpHrir(int el, float L1, int az, float L2);
+	static void JudgeDirection(Vector4f drct, Vector4f front, Vector4f up, vector<vector<double>> & hrir_s);
+	static vector<vector<double>> InterpHrir(int el, float L1, int az, float L2);
 
 private:
-	static vector<vector<vector<vector<float>>>> db;
+	static string type;
+	static vector<vector<vector<vector<double>>>> db;
 };
 
 class WallAirAbsorb
@@ -59,7 +65,7 @@ public:
 	Direct();
 	~Direct();
 	//static void LoadCSV(string fileName);
-	static void LoadMAT(string fileName);
+	static void LoadBIN(string fileName);
 	static void paraLoad(string fineName, bool * complete);
 	static vector<double> EvalAmp(int azim, int elev);
 	static vector<double> EvalAmp(vector<int> polar);
