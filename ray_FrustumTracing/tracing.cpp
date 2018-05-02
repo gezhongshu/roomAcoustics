@@ -35,7 +35,7 @@ void Tracing::AddImpulseResponse(vector<vector<double>>& hrir, const vector<vect
 		eh += h[0]*h[0];
 	for (int ihs = 0; ihs < hrir_D.size(); ihs++)
 	{
-		int ind = id + ihs - hrir_s.size() / 2 - 128;
+		int ind = id + ihs - hrir_s.size() / 2;
 		if (ind >= LEN_RIR)break;
 		if (ind < 0)continue;
 		double coef = scatFlag ? egyCoef : 1;
