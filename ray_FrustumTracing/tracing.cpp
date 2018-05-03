@@ -430,8 +430,11 @@ void Tracing::PassReceiver(BiNode<RayNode>* ray, Orient& rec, const vector<doubl
 	int n_r = 0;
 	for (auto r : refs)
 		n_r += r;
+	double agl = ray->data.fsm.GetSolidAngle(), rd = len - len_s;
+	agl = agl*len / pi;
 	mu_egy.lock();
-	egyCoef = ray->data.fsm.GetSolidAngle() * len * Vector4f::Dot3f(r.GetRef(), r.GetDirect()) / pi / 4;
+	egyCoef = (1 - rd / sqrt(rd*rd + agl*agl)) * len * Vector4f::Dot3f(r.GetRef(), r.GetDirect())/2/pi;
+	//cout << "\nmod: " << 1 - rd / sqrt(rd*rd + agl*agl) << " ori: " << agl / 4 << endl;
 	if (n_r == 1)scatCount++;
 	if (n_r == 1)solid += ray->data.fsm.GetSolidAngle();
 	if (n_r)
