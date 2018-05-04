@@ -6,6 +6,7 @@ int Tracing::scatCount = 0;
 double Tracing::solid = 0;
 int counth = 0;
 double maxh = 0;
+Vector4f Tracing::pos_s = Vector4f();
 
 void Tracing::AddImpulseResponse(vector<vector<double>>& hrir, const vector<double>& sDrct, vector<int> refs, vector<int> mirs, vector<int> scats, int band, Vector4f vec, int id, double len, bool scatFlag)
 {
@@ -20,24 +21,36 @@ void Tracing::AddImpulseResponse(vector<vector<double>>& hrir, const vector<doub
 	vector<double> phaseAdj = WallAirAbsorb::FreqMult(delay * 2 * pi / FS);
 	bRef = WallAirAbsorb::Absorb(len, refs, mirs, scats, band);
 	double egy = 0, eh = 0, ec = 0;
-	/*for (auto c : sDrct)
-		egy += c.Energy();*/
-	if (bRef.size() < 10)
-		cout << "bRef.size() = " << bRef.size() << endl;
-	for (int i = 0; i < bRef.size(); i++)
-		cRef.push_back(Mul(COMPLEX(bRef[i], 0), COMPLEX(cos(phaseAdj[i]), sin(phaseAdj[i]))));
-	for (auto c : cRef)
-		ec += c.Energy();
-	hrir_s = WallAirAbsorb::InterpIFFT(cRef);
+	if (wideBand < -1)
+	{
+		for (int i = 0; i < bRef.size(); i++)
+			cRef.push_back(Mul(COMPLEX(bRef[i], 0), COMPLEX(cos(phaseAdj[i]), sin(phaseAdj[i]))));
+		for (auto c : cRef)
+			ec += c.Energy();
+		hrir_s = WallAirAbsorb::InterpIFFT(cRef);
+	}
+	else
+		hrir_s = bRef;
 	vector<vector<double>> hrir_D;
-	for (auto sd : sDrct)
-		hrir_D.push_back(vector<double>(1, sd));
+	double min = 0;
+	int offset = 0;
+	if (hasDrct)
+		for (int i = 0; i < sDrct.size(); i++)
+			hrir_D.push_back(vector<double>(1, sDrct[i]));
+	else
+		hrir_D = vector<vector<double>>(1, vector<double>(1, 1));
 	hrir_D = WallAirAbsorb::ConvHrir(hrir_s, hrir_D);
+	for (int i = 0; i < hrir_D.size(); i++)
+		if (min > hrir_D[i][0])
+		{
+			min = hrir_D[i][0];
+			offset = i;
+		}
 	for (auto h : hrir_D)
 		eh += h[0]*h[0];
 	for (int ihs = 0; ihs < hrir_D.size(); ihs++)
 	{
-		int ind = id + ihs - hrir_s.size() / 2 - 128;
+		int ind = id + ihs - offset;
 		if (ind >= LEN_RIR)break;
 		if (ind < 0)continue;
 		double coef = scatFlag ? egyCoef : 1;
@@ -304,7 +317,7 @@ void Tracing::PassReceiver(BiNode<FsmNode>* ray, Orient& rec, const vector<doubl
 void Tracing::TracingInRoom(vector<BiNode<RayNode>*>& rays, OBBTree * tree, int ref, Vector4f s)
 {
 	int numRay = 0;
-	float delta = 2;
+	//float delta = 1;
 
 	for (float elev = -90 + 2 * delta; 90 - elev - 2 * delta >= 0; elev += 2 * delta)
 	{
@@ -326,7 +339,7 @@ void Tracing::TracingInRoom(vector<BiNode<RayNode>*>& rays, OBBTree * tree, int 
 			OBBIntersection::CollisionTest(&ray, tree);
 			rays.push_back(new BiNode<RayNode>(RayNode(fsm, ray)));
 			rays.back()->data.CutFsm();
-			rays.back()->isScat = false;
+			rays.back()->isScat = true;
 			solid += rays.back()->data.fsm.GetSolidAngle();
 			while (totalTask > maxThread) Sleep(0);
 			mu_thread.lock();
@@ -374,7 +387,7 @@ void Tracing::RefRay(BiNode<RayNode>* pr, bool divide)
 		verts.push_back(vertex + dr * dnorm / Vector4f::Dot3f(d1, dr));
 	}
 	pr->right = new BiNode<RayNode>(RayNode(Frustum(vertex, verts), start, d1, n, dist + pr->data.ray.GetEnd()));
-	pr->right->isScat = false;
+	pr->right->isScat = pr->isScat;
 
 	/*if (divide)
 	{
@@ -430,16 +443,24 @@ void Tracing::PassReceiver(BiNode<RayNode>* ray, Orient& rec, const vector<doubl
 	int n_r = 0;
 	for (auto r : refs)
 		n_r += r;
-	double agl = ray->data.fsm.GetSolidAngle(), rd = len - len_s;
-	agl = agl*len / pi;
-	mu_egy.lock();
-	egyCoef = (1 - rd / sqrt(rd*rd + agl*agl)) * len * Vector4f::Dot3f(r.GetRef(), r.GetDirect())/2/pi;
-	//cout << "\nmod: " << 1 - rd / sqrt(rd*rd + agl*agl) << " ori: " << agl / 4 << endl;
-	if (n_r == 1)scatCount++;
-	if (n_r == 1)solid += ray->data.fsm.GetSolidAngle();
-	if (n_r)
-		AddImpulseResponse(hrir, sDrct, refs, vector<int>(refs.size(), 0), scats, band, vec, id, len, true);
-	mu_egy.unlock();
+	if (hasScat)
+	{
+		double agl = ray->data.fsm.GetSolidAngle(), rd = len - len_s;
+		assert(agl > 0);
+		agl = agl*Vector4f::Dot3f(r.GetRef(), vec) / vec.GetLenght();
+		mu_egy.lock();
+		egyCoef = 1 / rd * sqrt(len * abs(agl / pi));
+		//cout << "\nmod: " << egyCoef << " ori: " << ray->data.fsm.GetSolidAngle()*len/4/pi*rd << endl;
+		if (n_r == 1)scatCount++;
+		if (n_r == 1)solid += ray->data.fsm.GetSolidAngle();
+		if (n_r)
+			AddImpulseResponse(hrir, sDrct, refs, vector<int>(refs.size(), 0), scats, band, vec, id, len, true);
+		mu_egy.unlock();
+	}
+	else
+		mirs = vector<int>(refs.size(), 0);
+	if (id - (pos_s - rec.GetPos()).GetLenght()*FS / SOUND_SPEED < 100)
+		id = (int)round((pos_s - rec.GetPos()).GetLenght()*FS / SOUND_SPEED);
 	if (colli)
 		AddImpulseResponse(hrir, sDrct, refs, mirs, vector<int>(refs.size(), 0), band, vec, id, len);
 }

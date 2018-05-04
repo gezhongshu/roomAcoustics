@@ -10,7 +10,12 @@
 #include "OBB.h"
 #include "dataBase.h"
 
-void TraceScenes(string file)
+extern float delta = 2;
+extern bool hasScat = true;
+extern bool hasDrct = true;
+extern int wideBand = -2;
+
+void TraceScenes(string file, int choose)
 {
 	fstream fin(file, ios::in);
 	int n; //Number of scenes
@@ -20,7 +25,18 @@ void TraceScenes(string file)
 	{
 		cout << "\n\nTracing scene: " << i + 1 << " / " << n << endl;
 		fin >> sceneFile >> matFile >> sourceFile;
-		//if (i > 0)continue;
+		if (i != choose)continue;
+		/*switch (choose)
+		{
+		case 2:
+			delta = 1;
+			break;
+		case 1:
+			delta = 1;
+			break;
+		default:
+			delta = 2;
+		}*/
 		vector<int> vertId, matId;
 		WallAirAbsorb::LoadwithFileList(matFile);
 
@@ -67,10 +83,26 @@ void TraceScenes(string file)
 	}
 }
 
-int main() 
+int main(int argc, char* argv[]) 
 {
+	int choose = 0;
+	switch (argc)
+	{
+	case 5:
+		wideBand = -1 - atoi(argv[4]);
+	case 4:
+		hasDrct = (bool)atoi(argv[3]);
+	case 3:
+		hasScat = (bool)atoi(argv[2]);
+	case 2:
+		choose = atoi(argv[1]) - 1;
+	default:
+		break;
+	}
+	cout << "~~~Configuration:\n\tHas Scatter: " << hasScat << "\n\tHas Direction: " << hasDrct 
+		<< "\n\tBand Average: " << (wideBand + 2) << endl;
 	cout << "\nTracing rays ..." << endl;
-	TraceScenes("data\\scenes.txt");
+	TraceScenes("data\\scenes.txt", choose);
 	cout << "\nTraced off." << endl;
 
 	system("pause");

@@ -18,6 +18,11 @@
 #include "dataBase.h"
 #include "utils.h"
 
+extern float delta;
+extern bool hasScat;
+extern bool hasDrct;
+extern int wideBand;
+
 namespace Tracing
 {
 	const int NC = 400;
@@ -27,6 +32,7 @@ namespace Tracing
 	extern double angleLim, solid;
 	extern double egyCoef;
 	extern int scatCount;
+	extern Vector4f pos_s;
 
 
 	template<typename T>
@@ -224,6 +230,7 @@ void Tracing::ReadSourceAndTracing(vector<BiNode<T>*>& rays, OBBTree * tree, int
 			>> front[0] >> front[2] >> front[1]
 			>> directFile >> pathFile;
 		rays.clear();
+		pos_s = source;
 		cout << "\nCalculating source: " << i + 1 << " / " << numSources << endl << endl;
 		bool complete = false;
 		thread task(Direct::paraLoad, directFile, &complete);
@@ -288,18 +295,13 @@ void Tracing::Traversal(BiNode<T>* ray, Orient & rec, const vector<double>& sDrc
 			Tracing::Traversal(ray->left, rec, sDrct, hrir, refs, mirs, scats);
 			if (ray->isScat)scats[mId]--;
 		}
-		else
-			band--;
 		if (ray->right)
 		{
-			//if (ray->isScat)mirs[mId]++;
-			mirs = vector<int>(refs.size(), 0);
-			scats = mirs;
-			mirs[mId] = 1;
+			if (ray->isScat)mirs[mId]++;
+			scats = vector<int>(refs.size(), 0);
 			scats[mId] = 1;
 			Tracing::Traversal(ray->right, rec, sDrct, hrir, refs, mirs, scats, band);
-			//if (ray->isScat)mirs[mId]--;
-			mirs[mId] = 0;
+			if (ray->isScat)mirs[mId]--;
 			scats[mId] = 0;
 		}
 		refs[mId]--;
@@ -355,7 +357,7 @@ void Tracing::ColliReceiver(vector<BiNode<T>*>& rays, Orient& s, Orient& r, vect
 		if (PARALLEL)
 		{
 			mu_thread.unlock();
-			tasks.push_back(thread(TraversalParallel<T>, &totalTask, ray, r, sDrct, std::ref(hrir), refs, mirs, scats, -2));
+			tasks.push_back(thread(TraversalParallel<T>, &totalTask, ray, r, sDrct, std::ref(hrir), refs, mirs, scats, wideBand));
 			tasks.back().detach();
 		}
 	}

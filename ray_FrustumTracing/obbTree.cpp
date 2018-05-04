@@ -336,7 +336,7 @@ bool OBBIntersection::CalcColliPoint(Ray * ray, faceInfo * face)
 {
 	Vector4f s = ray->GetStartPt(), d = ray->GetDirect(), n = face->faceNorm, p, a, b, c;
 	vector<Vector4f> verts = face->verts;
-	if (Vector4f::Dot3f(d, n) >= 0)return false;
+	//if (Vector4f::Dot3f(d, n) >= 0)return false;
 	float t, u, v;
 	bool flag = IntersectTriangle(ray->GetStartPt(), ray->GetDirect(),
 		verts[0], verts[1], verts[2], &t, &u, &v);
