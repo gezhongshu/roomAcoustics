@@ -206,7 +206,7 @@ WallAirAbsorb::~WallAirAbsorb()
 
 vector<double> WallAirAbsorb::Absorb(double dist, vector<int>& refs, vector<int>& mirs, vector<int>& scats, int band)
 {
-	// band < -1: 全频带, band == -1: 频带平均, band > -1: 单频带
+	// band < -1: 全频带, band == -1: 频带平均, band > -1: 单个频带
 	vector<double> bRef;
 	if (band < -1)
 		bRef = vector<double>(fq.size(), 1);
