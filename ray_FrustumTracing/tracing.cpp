@@ -41,6 +41,7 @@ void Tracing::AddImpulseResponse(vector<vector<double>>& hrir, const vector<vect
 		double coef = scatFlag ? egyCoef : 1;
 		mu_hrir.lock();
 		hrir[ind][0] += coef*(1 - 2 * (nref % 2))*hrir_D[ihs][0];
+		hrir[ind][1] += coef*(1 - 2 * (nref % 2))*hrir_D[ihs][1];
 		/*if (ind == 1443 && scatFlag)
 		{
 			counth++;
