@@ -208,7 +208,7 @@ void Tracing::TracingInRoom(vector<BiNode<FsmNode>*>& rays, OBBTree * tree, int 
 			OBBIntersection::CollisionTest(&ray, tree);
 			rays.push_back(new BiNode<FsmNode>(FsmNode(ray, 0, drct)));
 			ColliFace(rays.back()->data, tree);
-			rays.back()->isScat = false;
+			rays.back()->isScat = hasScat;
 			solid += rays.back()->data.fsm.GetSolidAngle();
 			while (totalTask > maxThread) Sleep(0);
 			mu_thread.lock();
@@ -244,7 +244,7 @@ void Tracing::RefRay(BiNode<FsmNode>* pr, bool divide)
 		verts.push_back(r.GetStartPt() + r.GetDirect()*(r.GetEnd() - 1e-5));
 	vertex = vertex - n * 2 * (Vector4f::Dot3f(vertex, n) + n.w);
 	pr->right = new BiNode<FsmNode>(FsmNode(Frustum(vertex, verts), pr->data.TravelDist()));
-	pr->right->isScat = false;
+	pr->right->isScat = pr->isScat;
 
 	/*if (divide)
 	{
@@ -339,7 +339,7 @@ void Tracing::TracingInRoom(vector<BiNode<RayNode>*>& rays, OBBTree * tree, int 
 			OBBIntersection::CollisionTest(&ray, tree);
 			rays.push_back(new BiNode<RayNode>(RayNode(fsm, ray)));
 			rays.back()->data.CutFsm();
-			rays.back()->isScat = true;
+			rays.back()->isScat = hasScat;
 			solid += rays.back()->data.fsm.GetSolidAngle();
 			while (totalTask > maxThread) Sleep(0);
 			mu_thread.lock();
@@ -529,7 +529,7 @@ void Tracing::ColliReceiver(vector<vector<Ray>>& rays, Vector4f rec, Vector4f fr
 	int id, n = hrir.size();
 	double chordLen, proj, Amp, length, angleLim = 0.05;//0.05 means a diameter of 5 cm at 1 meter distance
 	Vector4f vec;
-	vector<vector<float>> hrir_s;
+	vector<vector<double>> hrir_s;
 	for (int i = 0; i < rays.size(); i++)
 	{
 		Amp = 1.f;
