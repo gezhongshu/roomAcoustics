@@ -1,0 +1,4 @@
+3
+data\model\scene09_add.obj data\matInd\mat_scene09.txt data\source_path\sources09_brir.txt
+data\model\scene10_add.obj data\matInd\mat_scene10.txt data\source_path\sources10_brir.txt
+data\model\scene11_add.obj data\matInd\mat_scene11.txt data\source_path\sources11_brir.txt

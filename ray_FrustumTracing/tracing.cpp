@@ -8,7 +8,7 @@ int counth = 0;
 double maxh = 0;
 Vector4f Tracing::pos_s = Vector4f();
 
-void Tracing::AddImpulseResponse(vector<vector<double>>& hrir, const vector<double>& sDrct, vector<int> refs, vector<int> mirs, vector<int> scats, int band, Vector4f vec, int id, double len, bool scatFlag)
+void Tracing::AddImpulseResponse(vector<vector<double>>& hrir, const vector<vector<double>>& sDrct, vector<int> refs, vector<int> mirs, vector<int> scats, int band, Vector4f vec, int id, double len, bool scatFlag)
 {
 	int nref = 0;
 	for (auto r : refs)
@@ -32,17 +32,13 @@ void Tracing::AddImpulseResponse(vector<vector<double>>& hrir, const vector<doub
 	else
 		hrir_s = bRef;
 	vector<vector<double>> hrir_D;
-	double min = 0;
+	double max_abs = 0;
 	int offset = 0;
-	if (hasDrct)
-		hrir_D.push_back(sDrct);
-	else
-		hrir_D = vector<vector<double>>(1, vector<double>(1, 1));
-	hrir_D = WallAirAbsorb::ConvHrir(hrir_s, hrir_D);
+	hrir_D = WallAirAbsorb::ConvHrir(hrir_s, sDrct);
 	for (int i = 0; i < hrir_D[0].size(); i++)
-		if (min > hrir_D[0][i])
+		if (max_abs < abs(hrir_D[0][i] + hrir_D[1][i]))
 		{
-			min = hrir_D[0][i];
+			max_abs = abs(hrir_D[0][i] + hrir_D[1][i]);
 			offset = i;
 		}
 	double coef = scatFlag ? egyCoef : 1;
@@ -53,6 +49,7 @@ void Tracing::AddImpulseResponse(vector<vector<double>>& hrir, const vector<doub
 		if (ind < 0)continue;
 		mu_hrir.lock();
 		hrir[ind][0] += coef*hrir_D[0][ihs];
+		hrir[ind][1] += coef*hrir_D[1][ihs];
 		mu_hrir.unlock();
 	}
 }
@@ -161,13 +158,15 @@ void Tracing::PassReceiver(BiNode<Ray>* ray, Orient& rec, const vector<double>& 
 	vec.SetLenght(len);
 	id = (int)round(len * FS / SOUND_SPEED);
 	if (id >= n+256 || Vector4f::Dot3f(rec.GetPos() - r.GetStartPt(), r.GetRef()) + r.GetRef().w < 0)return;
+	vector<vector<double>> hr = HRIR::EvalAmp(rec.LocalPolar(r.GetStartPt() - rec.GetPos()));
+	vector<vector<double>> sDHrir = WallAirAbsorb::ConvHrir(sDrct, hr);
 	int n_r = 0;
 	for (auto r : refs)
 		n_r += r;
 	if (n_r)
-		AddImpulseResponse(hrir, sDrct, refs, vector<int>(refs.size(), 0), scats, band, vec, id, len, true);
+		AddImpulseResponse(hrir, sDHrir, refs, vector<int>(refs.size(), 0), scats, band, vec, id, len, true);
 	if(chordLen / len <= Tracing::angleLim && proj <= r.GetEnd())
-		AddImpulseResponse(hrir, sDrct, refs, mirs, vector<int>(refs.size(), 0), band, vec, id, len);
+		AddImpulseResponse(hrir, sDHrir, refs, mirs, vector<int>(refs.size(), 0), band, vec, id, len);
 }
 
 
@@ -287,6 +286,8 @@ void Tracing::PassReceiver(BiNode<FsmNode>* ray, Orient& rec, const vector<doubl
 	Vector4f norm = ray->data.fsm.GetNorm().back();
 	if (id >= n || Vector4f::Dot3f(norm, rec.GetPos()) + norm.w <= 0)return;
 	double len_s = ray->data.fsm.GetCorner().front().GetBegin() + (ray->data.fsm.GetCorner().back().GetBeginPt() - rec.GetPos()).GetLenght();
+	vector<vector<double>> hr = HRIR::EvalAmp(rec.LocalPolar(ray->data.fsm.GetVertex() - rec.GetPos()));
+	vector<vector<double>> sDHrir = WallAirAbsorb::ConvHrir(sDrct, hr);
 	int n_r = 0;
 	for (auto r : refs)
 		n_r += r;
@@ -295,10 +296,10 @@ void Tracing::PassReceiver(BiNode<FsmNode>* ray, Orient& rec, const vector<doubl
 	if (n_r == 1)scatCount++;
 	if (n_r == 1)solid += ray->data.fsm.GetSolidAngle();
 	if (n_r)
-		AddImpulseResponse(hrir, sDrct, refs, vector<int>(refs.size(), 0), scats, band, vec, id, len_s, true);
+		AddImpulseResponse(hrir, sDHrir, refs, vector<int>(refs.size(), 0), scats, band, vec, id, len_s, true);
 	mu_egy.unlock();
 	if (colli)
-		AddImpulseResponse(hrir, sDrct, refs, mirs, scats, band, vec, id, len);
+		AddImpulseResponse(hrir, sDHrir, refs, mirs, scats, band, vec, id, len);
 }
 
 
@@ -428,6 +429,13 @@ void Tracing::PassReceiver(BiNode<RayNode>* ray, Orient& rec, const vector<doubl
 	id = (int)round(len * FS / SOUND_SPEED);
 	if (id >= n+256 || Vector4f::Dot3f(rec.GetPos() - r.GetStartPt(), r.GetRef()) + r.GetRef().w < 0)return;
 	len_s = r.GetDist();
+	vector<vector<double>> filter;
+	if (hasDrct)
+		filter.push_back(sDrct);
+	else
+		filter = vector<vector<double>>(1, vector<double>(1, 1));
+	vector<vector<double>> hr = HRIR::EvalAmp(rec.LocalPolar(r.GetStartPt() - rec.GetPos()));
+	vector<vector<double>> sDHrir = WallAirAbsorb::ConvHrir(filter[0], hr);
 	//id = id + rand() % 5 - 2;
 	int n_r = 0;
 	for (auto r : refs)
@@ -443,15 +451,15 @@ void Tracing::PassReceiver(BiNode<RayNode>* ray, Orient& rec, const vector<doubl
 		if (n_r == 1)scatCount++;
 		if (n_r == 1)solid += ray->data.fsm.GetSolidAngle();
 		if (n_r)
-			AddImpulseResponse(hrir, sDrct, refs, vector<int>(refs.size(), 0), scats, band, vec, id, len, true);
+			AddImpulseResponse(hrir, sDHrir, refs, vector<int>(refs.size(), 0), scats, band, vec, id, len, true);
 		mu_egy.unlock();
 	}
 	else
 		mirs = vector<int>(refs.size(), 0);
-	if (id - (pos_s - rec.GetPos()).GetLenght()*FS / SOUND_SPEED < 100)
+	if (choose && id - (pos_s - rec.GetPos()).GetLenght()*FS / SOUND_SPEED < 100)
 		id = (int)round((pos_s - rec.GetPos()).GetLenght()*FS / SOUND_SPEED);
 	if (colli)
-		AddImpulseResponse(hrir, sDrct, refs, mirs, vector<int>(refs.size(), 0), band, vec, id, len);
+		AddImpulseResponse(hrir, sDHrir, refs, mirs, vector<int>(refs.size(), 0), band, vec, id, len);
 }
 
 

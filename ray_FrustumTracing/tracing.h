@@ -18,6 +18,7 @@
 #include "dataBase.h"
 #include "utils.h"
 
+extern int choose;
 extern float delta;
 extern bool hasScat;
 extern bool hasDrct;
@@ -50,7 +51,7 @@ namespace Tracing
 	template<typename T>
 	void ColliReceiver(vector<BiNode<T>*>& rays, Orient& s, Orient& r, vector<vector<double>>& hrir, ofstream& fout);
 
-	void AddImpulseResponse(vector<vector<double>>& hrir, const vector<double>& sDrct, vector<int> refs, vector<int> mirs, vector<int> scats, int band, Vector4f vec, int id, double len_s, bool scatFlag = false);
+	void AddImpulseResponse(vector<vector<double>>& hrir, const vector<vector<double>>& sDrct, vector<int> refs, vector<int> mirs, vector<int> scats, int band, Vector4f vec, int id, double len_s, bool scatFlag = false);
 
 	void TracingInRoom(vector<BiNode<Ray>*>& rays, OBBTree * tree, int ref, Vector4f s, int nCircle = NC);
 	void RefRay(BiNode<Ray>* pr, bool divide = true);
@@ -186,7 +187,7 @@ void Tracing::ReadPathAndColli(string filename, string destdir, vector<BiNode<T>
 		fin >> receiver[0] >> receiver[2] >> receiver[1] >>
 			front[0] >> front[2] >> front[1] >>
 			up[0] >> up[2] >> up[1];
-		hrir = vector<vector<double>>(len, vector<double>(1));
+		hrir = vector<vector<double>>(len, vector<double>(2));
 		cout << "\nCalculating receiver: " << i + 1 << " / " << n << endl;
 		int offset = 0;
 		while (offset != string::npos)
@@ -201,7 +202,7 @@ void Tracing::ReadPathAndColli(string filename, string destdir, vector<BiNode<T>
 		/*fout.close();
 		ofstream fout(destdir + to_string(i) + ".dat", ios::binary);*/
 		for (int k = 0; k < len; k++)
-			for (int l = 0; l < 1; l++)
+			for (int l = 0; l < 2; l++)
 				fout.write((char*)&hrir[k][l], sizeof(double));
 		fout.close();
 	}
@@ -232,17 +233,19 @@ void Tracing::ReadSourceAndTracing(vector<BiNode<T>*>& rays, OBBTree * tree, int
 		rays.clear();
 		pos_s = source;
 		cout << "\nCalculating source: " << i + 1 << " / " << numSources << endl << endl;
-		bool complete = false;
+		bool complete = false, hrirState = false;
 		thread task(Direct::paraLoad, directFile, &complete);
+		thread task_h(HRIR::paraLoad, ".\\data\\HRIR.bin", &hrirState);
 		task.detach();
+		task_h.detach();
 		//Direct::LoadBIN(directFile);
 		solid = 0;
 		TracingInRoom(rays, tree, ref, source);
-		while (!complete) Sleep(1);
+		while (!complete||!hrirState) Sleep(1);
 		string tname(typeid(T).name());
 		tname = tname.substr(tname.find_last_of(' ') + 1);
-		string sceneName = fileIndex.substr(fileIndex.find_last_of('.') - 2, 2);
-		ReadPathAndColli(pathFile, ".\\data\\RIR\\scene" + sceneName + "\\" + tname + "_" + fname + "\\", rays, Orient(source, front, up), LEN_RIR);
+		string sceneName = fileIndex.substr(fileIndex.find_last_of("901") - 1, 2);
+		ReadPathAndColli(pathFile, ".\\data\\BRIR\\scene" + sceneName + "\\" + tname + "_" + fname + "\\", rays, Orient(source, front, up), LEN_RIR);
 	}
 	fin.close();
 }
