@@ -35,36 +35,24 @@ void Tracing::AddImpulseResponse(vector<vector<double>>& hrir, const vector<doub
 	double min = 0;
 	int offset = 0;
 	if (hasDrct)
-		for (int i = 0; i < sDrct.size(); i++)
-			hrir_D.push_back(vector<double>(1, sDrct[i]));
+		hrir_D.push_back(sDrct);
 	else
 		hrir_D = vector<vector<double>>(1, vector<double>(1, 1));
 	hrir_D = WallAirAbsorb::ConvHrir(hrir_s, hrir_D);
-	for (int i = 0; i < hrir_D.size(); i++)
-		if (min > hrir_D[i][0])
+	for (int i = 0; i < hrir_D[0].size(); i++)
+		if (min > hrir_D[0][i])
 		{
-			min = hrir_D[i][0];
+			min = hrir_D[0][i];
 			offset = i;
 		}
-	for (auto h : hrir_D)
-		eh += h[0]*h[0];
-	for (int ihs = 0; ihs < hrir_D.size(); ihs++)
+	double coef = scatFlag ? egyCoef : 1;
+	for (int ihs = 0; ihs < hrir_D[0].size(); ihs++)
 	{
 		int ind = id + ihs - offset;
 		if (ind >= LEN_RIR)break;
 		if (ind < 0)continue;
-		double coef = scatFlag ? egyCoef : 1;
 		mu_hrir.lock();
-		hrir[ind][0] += coef*(1 - 2 * (nref % 2))*hrir_D[ihs][0];
-		/*if (ind == 1443 && scatFlag)
-		{
-			counth++;
-			maxh += coef*(1 - 2 * (nref % 2))*hrir_D[ihs];
-			if (counth % 100 == 0)
-			{
-				cout << "\n\tcount: " << counth << "\tmax: " << maxh << "\tref: " << nref << "\tlen: " << len << endl;
-			}
-		}*/
+		hrir[ind][0] += coef*hrir_D[0][ihs];
 		mu_hrir.unlock();
 	}
 }
@@ -440,6 +428,7 @@ void Tracing::PassReceiver(BiNode<RayNode>* ray, Orient& rec, const vector<doubl
 	id = (int)round(len * FS / SOUND_SPEED);
 	if (id >= n+256 || Vector4f::Dot3f(rec.GetPos() - r.GetStartPt(), r.GetRef()) + r.GetRef().w < 0)return;
 	len_s = r.GetDist();
+	//id = id + rand() % 5 - 2;
 	int n_r = 0;
 	for (auto r : refs)
 		n_r += r;

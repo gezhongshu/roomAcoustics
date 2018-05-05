@@ -20,7 +20,7 @@ void HRIR::LoadBIN(string fileName)
 	fstream fin(fileName, ios::in | ios::binary);
 	const int len = 512, num = 64442;
 	double HRIR[len];
-	db.reserve(sizeof(double) * 512 * num);
+	db.reserve(sizeof(double) * 3 * num * 2);
 	for (int i = 0; i < num; i++)
 	{
 		fin.read((char*)HRIR, sizeof(double) * len);
@@ -340,14 +340,14 @@ void WallAirAbsorb::LoadMat(vector<string> fileNames)
 
 vector<vector<double>> WallAirAbsorb::ConvHrir(vector<double> filter, vector<vector<double>> hrir)
 {
-	vector<vector<double>> hrirFiltered = vector<vector<double>>(2, vector<double>(filter.size() + hrir[0].size() - 1, 0));
+	vector<vector<double>> hrirFiltered = vector<vector<double>>(hrir.size(), vector<double>(filter.size() + hrir[0].size() - 1, 0));
 	for (int i = 0; i < filter.size(); i++)
-		for (int k = 0; k < 2; k++)
-			for (int j = (i >= hrir.size() ? i - hrir.size() + 1 : 0); j <= i; j++)
+		for (int k = 0; k < hrir.size(); k++)
+			for (int j = (i >= hrir[0].size() ? i - hrir[0].size() + 1 : 0); j <= i; j++)
 				hrirFiltered[k][i] += hrir[k][i - j] * filter[j];
-	for (int i = filter.size(); i < hrirFiltered.size(); i++)
-		for (int k = 0; k < 2; k++)
-			for (int j = (i >= hrir.size() ? i - hrir.size() + 1 : 0); j < filter.size(); j++)
+	for (int i = filter.size(); i < hrirFiltered[0].size(); i++)
+		for (int k = 0; k < hrir.size(); k++)
+			for (int j = (i >= hrir[0].size() ? i - hrir[0].size() + 1 : 0); j < filter.size(); j++)
 				hrirFiltered[k][i] += hrir[k][i - j] * filter[j];
 	/*double maxV = 0;
 	int maxInd;
@@ -505,7 +505,7 @@ void Direct::LoadBIN(string fileName)
 	fstream fin(fileName, ios::in | ios::binary);
 	const int len = 4096, num = 64442;
 	double IR[len];
-	directions.reserve(sizeof(double) * 512 * num * 2);
+	directions.reserve(sizeof(double) * 6 * num * 2);
 	for (int i = 0; i < num; i++)
 	{
 		fin.read((char*)IR, sizeof(double) * len);
