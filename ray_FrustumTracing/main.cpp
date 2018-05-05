@@ -10,6 +10,7 @@
 #include "OBB.h"
 #include "dataBase.h"
 
+extern int choose = 0;
 extern float delta = 2;
 extern bool hasScat = true;
 extern bool hasDrct = true;
@@ -85,7 +86,6 @@ void TraceScenes(string file, int choose)
 
 int main(int argc, char* argv[]) 
 {
-	int choose = 0;
 	switch (argc)
 	{
 	case 5:

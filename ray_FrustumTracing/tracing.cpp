@@ -448,7 +448,7 @@ void Tracing::PassReceiver(BiNode<RayNode>* ray, Orient& rec, const vector<doubl
 	}
 	else
 		mirs = vector<int>(refs.size(), 0);
-	if (id - (pos_s - rec.GetPos()).GetLenght()*FS / SOUND_SPEED < 100)
+	if (choose && id - (pos_s - rec.GetPos()).GetLenght()*FS / SOUND_SPEED < 100)
 		id = (int)round((pos_s - rec.GetPos()).GetLenght()*FS / SOUND_SPEED);
 	if (colli)
 		AddImpulseResponse(hrir, sDrct, refs, mirs, vector<int>(refs.size(), 0), band, vec, id, len);

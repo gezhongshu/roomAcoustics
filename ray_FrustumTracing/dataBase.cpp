@@ -16,7 +16,7 @@ void HRIR::LoadBIN(string fileName)
 		if (type == name)
 			return;
 	type = name;
-	cout << "\nLoading the source directional file " << type << " ..." << endl;
+	cout << "\nLoading the HRIR file " << type << " ..." << endl;
 	fstream fin(fileName, ios::in | ios::binary);
 	const int len = 512, num = 64442;
 	double HRIR[len];
@@ -35,7 +35,7 @@ void HRIR::LoadBIN(string fileName)
 		db[theta][phi].push_back(vector<double>(&HRIR[0], &HRIR[256]));
 		db[theta][phi].push_back(vector<double>(&HRIR[256], &HRIR[512]));
 	}
-	cout << "\nDirectional file loaded." << endl;
+	cout << "\nHRIR file loaded." << endl;
 }
 
 void HRIR::paraLoad(string fileName, bool * complete)
@@ -46,19 +46,18 @@ void HRIR::paraLoad(string fileName, bool * complete)
 
 vector<vector<double>> HRIR::EvalAmp(int azim, int elev)
 {
-	return db[90 - elev][azim];
+	return db[90 + elev][azim];
 }
 
 vector<vector<double>> HRIR::EvalAmp(vector<int> polar)
 {
-	return db[polar[1]][polar[0]];
+	return db[180 - polar[1]][polar[0]];
 }
 
 vector<vector<vector<vector<double>>>> 
 HRIR::db(vector<vector<vector<vector<double>>>>(181, 
 	vector<vector<vector<double>>>(360, 
-		vector<vector<double>>(2, 
-			vector<double>()))));
+		vector<vector<double>>())));
 string HRIR::type = string();
 
 

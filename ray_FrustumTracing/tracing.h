@@ -18,6 +18,7 @@
 #include "dataBase.h"
 #include "utils.h"
 
+extern int choose;
 extern float delta;
 extern bool hasScat;
 extern bool hasDrct;
