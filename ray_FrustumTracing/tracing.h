@@ -26,7 +26,7 @@ extern int wideBand;
 
 namespace Tracing
 {
-	const int NC = 400;
+	const int NC = 200;
 	const bool PARALLEL = true;
 	static mutex mu_thread, mu_hrir, mu_egy;
 	static int maxThread = thread::hardware_concurrency();
@@ -34,6 +34,7 @@ namespace Tracing
 	extern double egyCoef;
 	extern int scatCount;
 	extern Vector4f pos_s;
+	extern ofstream fbin;
 
 
 	template<typename T>
@@ -193,17 +194,20 @@ void Tracing::ReadPathAndColli(string filename, string destdir, vector<BiNode<T>
 		while (offset != string::npos)
 			if (_access(destdir.substr(0, offset=destdir.find_first_of('\\', offset+1)).c_str(), 6) == -1)
 				_mkdir(destdir.substr(0, offset).c_str());
-		ofstream fout(destdir + to_string(i) + ".binary", ios::binary);
+		//ofstream fout(destdir + to_string(i) + ".binary", ios::binary);
+		ofstream fout(destdir + "temp", ios::binary);
 		scatCount = 0;
 		solid = 0;
+		fbin = ofstream(destdir + to_string(i) + ".directions", ios::binary);
 		ColliReceiver(rays, s, Orient(receiver, front, up), hrir, fout);
+		fbin.close();
 		cout << "\nscatCount: " << scatCount << endl;
 		cout << "\nsolid: " << solid << endl;
 		/*fout.close();
 		ofstream fout(destdir + to_string(i) + ".dat", ios::binary);*/
-		for (int k = 0; k < len; k++)
-			for (int l = 0; l < 2; l++)
-				fout.write((char*)&hrir[k][l], sizeof(double));
+		/*for (int k = 0; k < len; k++)
+			for (int l = 0; l < 1; l++)
+				fout.write((char*)&hrir[k][l], sizeof(double));*/
 		fout.close();
 	}
 	fin.close();
@@ -218,9 +222,9 @@ void Tracing::ReadSourceAndTracing(vector<BiNode<T>*>& rays, OBBTree * tree, int
 	string fname, directFile, pathFile;
 	Vector4f source, front, up;
 	double roomVolume = tree->GetTree()->GetBox()->GetVolume();
-	Tracing::angleLim = log10(roomVolume) * pi / 2 / NC;
+	Tracing::angleLim = log10(roomVolume) * pi / 2 / NC * 8 / 7;
 	cout << "\nangleLim = " << Tracing::angleLim << ", room volume: " << roomVolume
-		<< "\nEvaluate number of rays: " << int(pow(4 / pi*NC, 2)) << endl;
+		<< "\nEvaluate number of rays: " << int(pow(4 / pi*NC*7/8, 2)) << endl;
 	srand((int)time(0));
 	fstream fin(fileIndex, ios::in);
 	fin >> numSources;
@@ -244,8 +248,8 @@ void Tracing::ReadSourceAndTracing(vector<BiNode<T>*>& rays, OBBTree * tree, int
 		while (!complete||!hrirState) Sleep(1);
 		string tname(typeid(T).name());
 		tname = tname.substr(tname.find_last_of(' ') + 1);
-		string sceneName = fileIndex.substr(fileIndex.find_last_of("901") - 1, 2);
-		ReadPathAndColli(pathFile, ".\\data\\BRIR\\scene" + sceneName + "\\" + tname + "_" + fname + "\\", rays, Orient(source, front, up), LEN_RIR);
+		string sceneName = fileIndex.substr(fileIndex.find_last_of("\\") + 1, fileIndex.find_last_of(".") - fileIndex.find_last_of("\\"));
+		ReadPathAndColli(pathFile, ".\\data\\TypicalRoom\\" + sceneName + "\\" + tname + "_" + fname + "\\", rays, Orient(source, front, up), LEN_RIR);
 	}
 	fin.close();
 }

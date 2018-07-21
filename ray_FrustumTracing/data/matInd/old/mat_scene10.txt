@@ -1,0 +1,7 @@
+6
+.\data\source_path\matLib\mat_scene10_floor.csv
+.\data\source_path\matLib\mat_scene10_seating.csv
+.\data\source_path\matLib\mat_scene10_plaster.csv
+.\data\source_path\matLib\mat_scene10_ceiling.csv
+.\data\source_path\matLib\mat_scene10_stagePanels.csv
+.\data\source_path\matLib\mat_scene10_structuredPlaster.csv

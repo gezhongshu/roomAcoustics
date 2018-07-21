@@ -144,6 +144,8 @@ struct RayNode
 	void CutFsm()
 	{
 		if (!ray.IsIntersect())return;
+		fsm.cutWithPlane(ray.GetFace()->faceNorm);
+		return;
 		Vector4f d, vref;
 		vector<Vector4f> verts;
 		d = Vector4f(0) - ray.GetDirect();

@@ -15,6 +15,7 @@ extern float delta = 2;
 extern bool hasScat = true;
 extern bool hasDrct = true;
 extern int wideBand = -2;
+float scale = 10;
 
 void TraceScenes(string file, int choose)
 {
@@ -27,17 +28,22 @@ void TraceScenes(string file, int choose)
 		cout << "\n\nTracing scene: " << i + 1 << " / " << n << endl;
 		fin >> sceneFile >> matFile >> sourceFile;
 		if (i != choose)continue;
-		/*switch (choose)
+		/*if (choose == 0)
+			delta = 0.5;*/
+		switch (choose)
 		{
 		case 2:
-			delta = 1;
+			delta = 0.25;
 			break;
 		case 1:
+			delta = 0.5;
+			break;
+		case 0:
 			delta = 1;
 			break;
 		default:
 			delta = 2;
-		}*/
+		}
 		vector<int> vertId, matId;
 		WallAirAbsorb::LoadwithFileList(matFile);
 
@@ -52,7 +58,7 @@ void TraceScenes(string file, int choose)
 
 
 		cout << "\nCalculating the OBB tree of the mesh ..." << endl;
-		tree->ComputeOBBTree(OBB_DEPTH_CONDITION, 20, vertTab, vertCount, vertId, matId, 1.f);
+		tree->ComputeOBBTree(OBB_DEPTH_CONDITION, 20, vertTab, vertCount, vertId, matId, scale);
 		cout << "\nOBB tree calculated." << endl;
 
 		vector<BiNode<Ray>*> rays;
@@ -88,6 +94,10 @@ int main(int argc, char* argv[])
 {
 	switch (argc)
 	{
+	case 7:
+		delta = stof(argv[6]);
+	case 6:
+		scale = atof(argv[5]);
 	case 5:
 		wideBand = -1 - atoi(argv[4]);
 	case 4:
@@ -102,7 +112,7 @@ int main(int argc, char* argv[])
 	cout << "~~~Configuration:\n\tHas Scatter: " << hasScat << "\n\tHas Direction: " << hasDrct 
 		<< "\n\tBand Average: " << (wideBand + 2) << endl;
 	cout << "\nTracing rays ..." << endl;
-	TraceScenes("data\\scenes_BRIR_head.txt", choose);
+	TraceScenes("data\\scenes_typical.txt", choose);
 	cout << "\nTraced off." << endl;
 
 	system("pause");

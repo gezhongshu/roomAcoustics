@@ -1,0 +1,2 @@
+8
+LS1 0.0 4.5 1.79 1.0 0.0 0.0 0.0 0.0 1.0 .\data\Genelec8020.bin .\data\source_path\auditorium_p.txt

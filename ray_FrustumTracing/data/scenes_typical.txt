@@ -1,0 +1,10 @@
+1
+data\model\shoebox.obj data\matInd\mat_shoebox.txt data\source_path\shoebox_s.txt
+7
+data\model\poly-cave.obj data\matInd\mat_poly-cave.txt data\source_path\poly-cave_s.txt
+data\model\classroom.obj data\matInd\mat_classroom.txt data\source_path\classroom_s.txt
+data\model\factory.obj data\matInd\mat_factory.txt data\source_path\factory_s.txt
+data\model\grassLand.obj data\matInd\mat_grassLand.txt data\source_path\grassLand_s.txt
+data\model\livingRoom.obj data\matInd\mat_livingRoom.txt data\source_path\livingRoom_s.txt
+data\model\closed-tunnel.obj data\matInd\mat_closed-tunnel.txt data\source_path\closed-tunnel_s.txt
+data\model\woodenRoom.obj data\matInd\mat_woodenRoom.txt data\source_path\woodenRoom_s.txt

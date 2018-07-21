@@ -180,7 +180,7 @@ WallAirAbsorb::WallAirAbsorb()
 void WallAirAbsorb::LoadwithFileList(string fileName)
 {
 	cout << "\nLoading materials ..." << endl;
-	matName = vector<string>(1, string("data\\matLib\\mat_scene09_concrete.csv"));
+	matName = vector<string>(1, string("data\\matLib\\mat_default.csv"));
 	fstream fin(fileName, ios::in);
 	int matNum, last;
 	string line;
